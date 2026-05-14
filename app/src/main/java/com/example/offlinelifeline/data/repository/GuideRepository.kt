@@ -11,6 +11,12 @@ class GuideRepository(
 
     suspend fun getGuide(id: String): GuideEntity? = guideDao.getGuide(id)
 
+    suspend fun seedDefaultGuidesIfNeeded() {
+        if (guideDao.countGuides() == 0) {
+            guideDao.upsertAll(DefaultGuideData.guides)
+        }
+    }
+
     suspend fun search(query: String): List<GuideEntity> {
         return if (query.isBlank()) {
             emptyList()

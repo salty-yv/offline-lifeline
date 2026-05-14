@@ -15,6 +15,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.offlinelifeline.di.AppContainer
 import com.example.offlinelifeline.ui.chat.ChatScreen
 import com.example.offlinelifeline.ui.chat.ChatViewModel
+import com.example.offlinelifeline.ui.guide.GuideScreen
+import com.example.offlinelifeline.ui.guide.GuideViewModel
 
 @Composable
 fun AppNavHost(
@@ -34,6 +36,18 @@ fun AppNavHost(
             )
             ChatScreen(
                 viewModel = chatViewModel,
+                modifier = modifier
+            )
+        }
+
+        Route.Guide -> {
+            val guideViewModel: GuideViewModel = viewModel(
+                factory = GuideViewModel.Factory(
+                    guideRepository = appContainer.guideRepository
+                )
+            )
+            GuideScreen(
+                viewModel = guideViewModel,
                 modifier = modifier
             )
         }

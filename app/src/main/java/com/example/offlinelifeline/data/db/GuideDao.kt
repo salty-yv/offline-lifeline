@@ -14,10 +14,15 @@ interface GuideDao {
     @Query("SELECT * FROM guides WHERE id = :id")
     suspend fun getGuide(id: String): GuideEntity?
 
+    @Query("SELECT COUNT(*) FROM guides")
+    suspend fun countGuides(): Int
+
     @Query(
         """
         SELECT * FROM guides
         WHERE title LIKE '%' || :query || '%'
+           OR summary LIKE '%' || :query || '%'
+           OR body LIKE '%' || :query || '%'
            OR tags LIKE '%' || :query || '%'
         ORDER BY title ASC
         """
