@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 interface LocalLlmEngine {
     val runtimeState: StateFlow<ModelRuntimeState>
 
+    val supportsImageInput: Boolean
+        get() = false
+
     suspend fun initialize(): Result<Unit>
 
     fun sendMessage(request: InferenceRequest): Flow<InferenceChunk>

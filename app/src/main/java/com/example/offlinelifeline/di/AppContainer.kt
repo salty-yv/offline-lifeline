@@ -10,7 +10,9 @@ import com.example.offlinelifeline.agent.QuestionPlanner
 import com.example.offlinelifeline.agent.RiskClassifier
 import com.example.offlinelifeline.agent.SurvivalAgent
 import com.example.offlinelifeline.agent.ToolRouter
+import com.example.offlinelifeline.core.diagnostics.DeviceDiagnosticsLogger
 import com.example.offlinelifeline.core.logging.DebugLogRepository
+import com.example.offlinelifeline.core.logging.DebugLogExporter
 import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.data.datastore.SettingsStore
 import com.example.offlinelifeline.data.db.AppDatabase
@@ -23,6 +25,10 @@ import com.example.offlinelifeline.inference.LocalLlmEngine
 import com.example.offlinelifeline.inference.ModelAssetManager
 import com.example.offlinelifeline.inference.ModelIntegrityChecker
 import com.example.offlinelifeline.inference.MockLlmEngine
+import com.example.offlinelifeline.device.battery.BatteryAdviceGenerator
+import com.example.offlinelifeline.device.battery.BatteryStatusProvider
+import com.example.offlinelifeline.device.flashlight.FlashlightController
+import com.example.offlinelifeline.device.image.ImagePreprocessor
 import com.example.offlinelifeline.safety.SafetyKernel
 
 class AppContainer(context: Context) {
@@ -46,6 +52,34 @@ class AppContainer(context: Context) {
 
     val debugLogger: DebugLogger by lazy {
         DebugLogger(debugLogRepository)
+    }
+
+    val debugLogExporter: DebugLogExporter by lazy {
+        DebugLogExporter(appContext, debugLogRepository)
+    }
+
+    val flashlightController: FlashlightController by lazy {
+        FlashlightController(appContext)
+    }
+
+    val batteryStatusProvider: BatteryStatusProvider by lazy {
+        BatteryStatusProvider(appContext)
+    }
+
+    val batteryAdviceGenerator: BatteryAdviceGenerator by lazy {
+        BatteryAdviceGenerator()
+    }
+
+    val imagePreprocessor: ImagePreprocessor by lazy {
+        ImagePreprocessor(appContext)
+    }
+
+    val deviceDiagnosticsLogger: DeviceDiagnosticsLogger by lazy {
+        DeviceDiagnosticsLogger(
+            context = appContext,
+            batteryStatusProvider = batteryStatusProvider,
+            debugLogger = debugLogger
+        )
     }
 
     val emergencyCardRepository: EmergencyCardRepository by lazy {

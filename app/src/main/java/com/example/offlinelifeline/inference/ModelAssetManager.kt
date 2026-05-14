@@ -1,6 +1,7 @@
 package com.example.offlinelifeline.inference
 
 import android.content.Context
+import android.os.SystemClock
 import com.example.offlinelifeline.core.common.AppDispatchers
 import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.core.model.ModelRuntimeState
@@ -20,17 +21,20 @@ class ModelAssetManager(
     suspend fun checkModel(
         manifest: ModelManifest = ModelManifest.Default
     ): ModelAssetCheckResult {
-        debugLogger?.info(TAG, "Checking model asset: ${manifest.modelName} ${manifest.modelVersion}")
+        val startedAt = SystemClock.elapsedRealtime()
+        debugLogger?.info(TAG, "model_check_start name=${manifest.modelName} version=${manifest.modelVersion}")
 
         val location = findModelLocation(manifest)
-            ?: return ModelAssetCheckResult(
+        if (location == null) {
+            return ModelAssetCheckResult(
                 manifest = manifest,
                 location = null,
                 runtimeState = ModelRuntimeState.Missing,
-                message = "模型文件不存在，可使用离线指南、工具箱和 Mock 模式。"
+                message = "Model file is missing. Offline guides and tools are still available."
             ).also {
-                debugLogger?.warning(TAG, it.message)
+                debugLogger?.warning(TAG, "model_check_missing elapsedMs=${SystemClock.elapsedRealtime() - startedAt}")
             }
+        }
 
         val integrityResult = when (location) {
             is ModelAssetLocation.FileLocation -> integrityChecker.verifyFile(location.file, manifest)
@@ -45,36 +49,50 @@ class ModelAssetManager(
                 manifest = manifest,
                 location = location,
                 runtimeState = ModelRuntimeState.ReadyToLoad,
-                message = "模型文件已通过基础检查。"
+                message = "Model file passed integrity checks."
             ).also {
-                debugLogger?.info(TAG, "${it.message} ${location.description}")
+                debugLogger?.info(
+                    TAG,
+                    buildString {
+                        append("model_check_valid")
+                        append(" location=").append(location.description)
+                        append(" expectedSizeBytes=").append(manifest.expectedSizeBytes)
+                        append(" elapsedMs=").append(SystemClock.elapsedRealtime() - startedAt)
+                    }
+                )
             }
 
             ModelIntegrityResult.Missing -> ModelAssetCheckResult(
                 manifest = manifest,
                 location = null,
                 runtimeState = ModelRuntimeState.Missing,
-                message = "模型文件不存在，可使用离线指南、工具箱和 Mock 模式。"
+                message = "Model file is missing. Offline guides and tools are still available."
             ).also {
-                debugLogger?.warning(TAG, it.message)
+                debugLogger?.warning(TAG, "model_check_missing elapsedMs=${SystemClock.elapsedRealtime() - startedAt}")
             }
 
             is ModelIntegrityResult.SizeMismatch -> ModelAssetCheckResult(
                 manifest = manifest,
                 location = location,
                 runtimeState = ModelRuntimeState.ChecksumFailed,
-                message = "模型大小不匹配：实际 ${integrityResult.actualSizeBytes}，期望 ${integrityResult.expectedSizeBytes}。"
+                message = "Model file size does not match the manifest."
             ).also {
-                debugLogger?.error(TAG, it.message)
+                debugLogger?.error(
+                    TAG,
+                    "model_check_size_mismatch actual=${integrityResult.actualSizeBytes} expected=${integrityResult.expectedSizeBytes} elapsedMs=${SystemClock.elapsedRealtime() - startedAt}"
+                )
             }
 
             is ModelIntegrityResult.ChecksumMismatch -> ModelAssetCheckResult(
                 manifest = manifest,
                 location = location,
                 runtimeState = ModelRuntimeState.ChecksumFailed,
-                message = "模型 SHA-256 不匹配，已阻止真实模型加载。"
+                message = "Model SHA-256 does not match the manifest."
             ).also {
-                debugLogger?.error(TAG, "${it.message} actual=${integrityResult.actualSha256}")
+                debugLogger?.error(
+                    TAG,
+                    "model_check_checksum_mismatch actual=${integrityResult.actualSha256} expected=${integrityResult.expectedSha256} elapsedMs=${SystemClock.elapsedRealtime() - startedAt}"
+                )
             }
         }
     }

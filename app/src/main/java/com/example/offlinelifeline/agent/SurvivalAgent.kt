@@ -26,7 +26,8 @@ class SurvivalAgent(
 ) {
     fun prepareResponse(
         userInput: String,
-        history: List<ChatMessage>
+        history: List<ChatMessage>,
+        imagePaths: List<String> = emptyList()
     ): PreparedAgentResponse {
         val scopedHistory = contextManager.summarizeIfNeeded(history)
         val contextMessages = scopedHistory + ChatMessage(
@@ -46,15 +47,22 @@ class SurvivalAgent(
             context = context,
             actionStructure = actionStructure,
             toolRecommendations = tools,
-            intent = intent
+            intent = intent,
+            imagePaths = imagePaths,
+            imageInputSupported = llmEngine.supportsImageInput
         )
         val safetyInstruction = promptBuilder.buildSafetyInstruction(
-            safetyKernel.buildSafetyInstruction(risks)
+            safetyKernel.buildSafetyInstruction(
+                riskDomains = risks,
+                hasImageInput = imagePaths.isNotEmpty(),
+                imageInputSupported = llmEngine.supportsImageInput
+            )
         )
 
         return PreparedAgentResponse(
             request = InferenceRequest(
                 text = userInput,
+                imagePaths = imagePaths,
                 systemInstruction = systemInstruction,
                 safetyInstruction = safetyInstruction
             ),

@@ -11,16 +11,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.core.model.ToolType
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.offlinelifeline.di.AppContainer
 import com.example.offlinelifeline.ui.chat.ChatScreen
 import com.example.offlinelifeline.ui.chat.ChatViewModel
+import com.example.offlinelifeline.ui.emergencycard.EmergencyCardScreen
+import com.example.offlinelifeline.ui.emergencycard.EmergencyCardViewModel
 import com.example.offlinelifeline.ui.guide.GuideScreen
 import com.example.offlinelifeline.ui.guide.GuideViewModel
+import com.example.offlinelifeline.ui.toolbox.ToolboxScreen
+import com.example.offlinelifeline.ui.toolbox.ToolboxViewModel
 
 @Composable
 fun AppNavHost(
     selectedRoute: Route,
+    selectedTool: ToolType?,
+    onToolSelected: (ToolType) -> Unit,
     appContainer: AppContainer,
     modifier: Modifier = Modifier
 ) {
@@ -31,11 +38,37 @@ fun AppNavHost(
                     chatRepository = appContainer.chatRepository,
                     llmEngine = appContainer.localLlmEngine,
                     survivalAgent = appContainer.survivalAgent,
-                    modelAssetManager = appContainer.modelAssetManager
+                    modelAssetManager = appContainer.modelAssetManager,
+                    imagePreprocessor = appContainer.imagePreprocessor
                 )
             )
             ChatScreen(
                 viewModel = chatViewModel,
+                onToolSelected = onToolSelected,
+                modifier = modifier
+            )
+        }
+
+        Route.Toolbox -> {
+            val toolboxViewModel: ToolboxViewModel = viewModel(
+                factory = ToolboxViewModel.Factory(
+                    flashlightController = appContainer.flashlightController,
+                    batteryStatusProvider = appContainer.batteryStatusProvider,
+                    batteryAdviceGenerator = appContainer.batteryAdviceGenerator,
+                    debugLogExporter = appContainer.debugLogExporter,
+                    deviceDiagnosticsLogger = appContainer.deviceDiagnosticsLogger
+                )
+            )
+            val emergencyCardViewModel: EmergencyCardViewModel = viewModel(
+                key = "toolbox-emergency-card",
+                factory = EmergencyCardViewModel.Factory(
+                    repository = appContainer.emergencyCardRepository
+                )
+            )
+            ToolboxScreen(
+                viewModel = toolboxViewModel,
+                emergencyCardViewModel = emergencyCardViewModel,
+                selectedTool = selectedTool,
                 modifier = modifier
             )
         }
@@ -48,6 +81,19 @@ fun AppNavHost(
             )
             GuideScreen(
                 viewModel = guideViewModel,
+                modifier = modifier
+            )
+        }
+
+        Route.EmergencyCard -> {
+            val emergencyCardViewModel: EmergencyCardViewModel = viewModel(
+                key = "main-emergency-card",
+                factory = EmergencyCardViewModel.Factory(
+                    repository = appContainer.emergencyCardRepository
+                )
+            )
+            EmergencyCardScreen(
+                viewModel = emergencyCardViewModel,
                 modifier = modifier
             )
         }

@@ -1,5 +1,6 @@
 package com.example.offlinelifeline.inference
 
+import android.os.SystemClock
 import com.example.offlinelifeline.core.common.AppDispatchers
 import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.core.model.ModelRuntimeState
@@ -32,6 +33,7 @@ class LiteRtLmEngine(
             return Result.success(Unit)
         }
 
+        val startedAt = SystemClock.elapsedRealtime()
         return runCatching {
             _runtimeState.value = ModelRuntimeState.Checking
             val checkResult = modelAssetManager.checkModel()
@@ -41,10 +43,10 @@ class LiteRtLmEngine(
             }
 
             val modelPath = checkResult.location?.absoluteModelPath()
-                ?: error("模型路径不可用")
+                ?: error("Model path is unavailable.")
 
             _runtimeState.value = ModelRuntimeState.Loading
-            debugLogger.info(TAG, "Initializing LiteRT-LM engine: $modelPath")
+            debugLogger.info(TAG, "litertlm_initialize_start modelPath=$modelPath backend=CPU")
 
             withContext(dispatchers.io) {
                 Engine.setNativeMinLogSeverity(LogSeverity.ERROR)
@@ -60,34 +62,69 @@ class LiteRtLmEngine(
             }
 
             _runtimeState.value = ModelRuntimeState.Ready
-            debugLogger.info(TAG, "LiteRT-LM engine ready")
+            debugLogger.info(TAG, "litertlm_initialize_success elapsedMs=${SystemClock.elapsedRealtime() - startedAt}")
         }.onFailure { throwable ->
-            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM 初始化失败")
-            debugLogger.error(TAG, "LiteRT-LM initialization failed", throwable)
+            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM initialization failed")
+            debugLogger.error(
+                TAG,
+                "litertlm_initialize_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}",
+                throwable
+            )
             release()
         }
     }
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
-        val activeConversation = conversation ?: error("LiteRT-LM 会话未初始化")
+        val activeConversation = conversation ?: error("LiteRT-LM conversation is not initialized")
         stopRequested = false
         _runtimeState.value = ModelRuntimeState.Generating
 
         val prompt = buildPrompt(request)
+        val startedAt = SystemClock.elapsedRealtime()
+        var firstTokenLatencyMs: Long? = null
+        var chunkCount = 0
+        var outputChars = 0
+
         try {
+            debugLogger.info(
+                TAG,
+                "litertlm_generation_start promptChars=${prompt.length} imageCount=${request.imagePaths.size} supportsImageInput=$supportsImageInput"
+            )
             activeConversation.sendMessageAsync(prompt).collect { message ->
                 if (stopRequested) throw CancellationException("LiteRT-LM generation stopped")
-                emit(InferenceChunk(text = message.toString(), isFinal = false))
+
+                val text = message.toString()
+                if (firstTokenLatencyMs == null && text.isNotEmpty()) {
+                    firstTokenLatencyMs = SystemClock.elapsedRealtime() - startedAt
+                    debugLogger.info(TAG, "litertlm_first_token latencyMs=$firstTokenLatencyMs")
+                }
+                chunkCount += 1
+                outputChars += text.length
+                emit(InferenceChunk(text = text, isFinal = false))
             }
+
             emit(InferenceChunk(text = "", isFinal = true))
             _runtimeState.value = ModelRuntimeState.Ready
+            debugLogger.info(
+                TAG,
+                "litertlm_generation_success totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
+            )
         } catch (throwable: Throwable) {
             if (throwable is CancellationException) {
                 _runtimeState.value = ModelRuntimeState.Ready
+                debugLogger.warning(
+                    TAG,
+                    "litertlm_generation_interrupted totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
+                )
                 throw throwable
             }
-            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM 生成失败")
-            debugLogger.error(TAG, "LiteRT-LM generation failed", throwable)
+
+            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM generation failed")
+            debugLogger.error(
+                TAG,
+                "litertlm_generation_failed totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars",
+                throwable
+            )
             throw throwable
         }
     }
@@ -95,10 +132,11 @@ class LiteRtLmEngine(
     override suspend fun stopGeneration() {
         stopRequested = true
         _runtimeState.value = ModelRuntimeState.Ready
-        debugLogger.info(TAG, "LiteRT-LM generation stop requested")
+        debugLogger.info(TAG, "litertlm_generation_stop_requested")
     }
 
     override suspend fun resetConversation() {
+        val startedAt = SystemClock.elapsedRealtime()
         stopGeneration()
         conversation?.close()
         conversation = withContext(dispatchers.io) {
@@ -109,18 +147,28 @@ class LiteRtLmEngine(
         } else {
             ModelRuntimeState.Ready
         }
+        debugLogger.info(
+            TAG,
+            "litertlm_conversation_reset elapsedMs=${SystemClock.elapsedRealtime() - startedAt} state=${_runtimeState.value::class.simpleName}"
+        )
     }
 
     override suspend fun release() {
+        val startedAt = SystemClock.elapsedRealtime()
         _runtimeState.value = ModelRuntimeState.Releasing
-        withContext(dispatchers.io) {
-            conversation?.close()
-            conversation = null
-            engine?.close()
-            engine = null
+        runCatching {
+            withContext(dispatchers.io) {
+                conversation?.close()
+                conversation = null
+                engine?.close()
+                engine = null
+            }
+        }.onFailure { throwable ->
+            debugLogger.error(TAG, "litertlm_release_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}", throwable)
+            throw throwable
         }
         _runtimeState.value = ModelRuntimeState.Released
-        debugLogger.info(TAG, "LiteRT-LM resources released")
+        debugLogger.info(TAG, "litertlm_release_success elapsedMs=${SystemClock.elapsedRealtime() - startedAt}")
     }
 
     private fun buildPrompt(request: InferenceRequest): String {

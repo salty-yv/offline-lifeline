@@ -16,7 +16,9 @@ class PromptBuilder {
         context: AgentContext,
         actionStructure: String,
         toolRecommendations: List<ToolRecommendation>,
-        intent: UserIntent = UserIntent.UNKNOWN
+        intent: UserIntent = UserIntent.UNKNOWN,
+        imagePaths: List<String> = emptyList(),
+        imageInputSupported: Boolean = false
     ): String {
         return buildString {
             appendLine("你是一个完全离线运行的自救助手。")
@@ -38,6 +40,22 @@ class PromptBuilder {
                 }
             }
             appendLine()
+
+            if (imagePaths.isNotEmpty()) {
+                appendLine("[Image Input]")
+                appendLine("User attached ${imagePaths.size} processed local image(s).")
+                appendLine("Image files were compressed and re-encoded locally before inference.")
+                if (imageInputSupported) {
+                    appendLine("The current runtime may inspect the attached image content.")
+                    appendLine("First describe only clearly visible content, then give conservative risk-oriented advice.")
+                    appendLine("Do not make definitive medical diagnosis or definitive wild food safety judgment from the image.")
+                } else {
+                    appendLine("The current runtime cannot inspect image pixels.")
+                    appendLine("Do not say you can see the image. Do not describe visual content.")
+                    appendLine("Ask the user for a short text description of what is in the image, while still giving safe immediate advice based on their text.")
+                }
+                appendLine()
+            }
 
             when (intent) {
                 UserIntent.EMERGENCY, UserIntent.UNKNOWN -> {

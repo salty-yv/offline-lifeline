@@ -15,6 +15,8 @@ class FallbackLlmEngine(
     override val runtimeState: StateFlow<ModelRuntimeState> = _runtimeState
 
     private var activeEngine: LocalLlmEngine = primary
+    override val supportsImageInput: Boolean
+        get() = activeEngine.supportsImageInput
 
     override suspend fun initialize(): Result<Unit> {
         val primaryResult = primary.initialize()

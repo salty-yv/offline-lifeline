@@ -6,8 +6,16 @@ class SafetyKernel(
     private val constraintBuilder: SafetyConstraintBuilder = SafetyConstraintBuilder(),
     private val outputValidator: OutputSafetyValidator = OutputSafetyValidator()
 ) {
-    fun buildSafetyInstruction(riskDomains: Set<RiskDomain>): String {
-        return constraintBuilder.buildSafetyInstruction(riskDomains)
+    fun buildSafetyInstruction(
+        riskDomains: Set<RiskDomain>,
+        hasImageInput: Boolean = false,
+        imageInputSupported: Boolean = false
+    ): String {
+        return constraintBuilder.buildSafetyInstruction(
+            riskDomains = riskDomains,
+            hasImageInput = hasImageInput,
+            imageInputSupported = imageInputSupported
+        )
     }
 
     fun validate(output: String, riskDomains: Set<RiskDomain>): SafetyValidationResult {

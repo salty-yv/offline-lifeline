@@ -6,5 +6,6 @@ data class ChatMessage(
     val text: String,
     val createdAtMillis: Long,
     val attachments: List<Attachment> = emptyList(),
+    val toolRecommendations: List<ToolRecommendation> = emptyList(),
     val isFinal: Boolean = true
 )

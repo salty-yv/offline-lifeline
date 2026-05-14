@@ -20,8 +20,8 @@ class MockLlmEngine(
         _runtimeState.value = ModelRuntimeState.Loading
         delay(500)
         return if (behavior == MockLlmBehavior.FailInitialization) {
-            _runtimeState.value = ModelRuntimeState.Failed("Mock 模型加载失败")
-            Result.failure(IllegalStateException("Mock 模型加载失败"))
+            _runtimeState.value = ModelRuntimeState.Failed("Mock model failed to load")
+            Result.failure(IllegalStateException("Mock model failed to load"))
         } else {
             _runtimeState.value = ModelRuntimeState.Ready
             Result.success(Unit)
@@ -30,8 +30,8 @@ class MockLlmEngine(
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
         if (behavior == MockLlmBehavior.FailGeneration) {
-            _runtimeState.value = ModelRuntimeState.Failed("Mock 生成失败")
-            throw IllegalStateException("Mock 生成失败")
+            _runtimeState.value = ModelRuntimeState.Failed("Mock generation failed")
+            throw IllegalStateException("Mock generation failed")
         }
 
         stopRequested = false
@@ -74,8 +74,15 @@ class MockLlmEngine(
             .substringAfter("[Available Local Tools]", missingDelimiterValue = "")
             .trim()
 
+        val imageNote = if (request.imagePaths.isNotEmpty()) {
+            "已收到 ${request.imagePaths.size} 张本地处理后的图片。当前 Mock/降级运行时不会读取图片像素，请用文字补充图片中的关键内容。我会先按保守原则给出建议。\n\n"
+        } else {
+            ""
+        }
+
         val response = if (agentPlan.isNotBlank()) {
             buildString {
+                append(imageNote)
                 append(agentPlan)
                 if (tools.isNotBlank()) {
                     append("\n\n可使用的本地工具\n")
@@ -85,6 +92,7 @@ class MockLlmEngine(
         } else {
             val normalizedInput = request.text.trim()
             buildString {
+                append(imageNote)
                 append("先保持原地安全，减少不必要操作。")
                 append("\n\n你刚才说：")
                 append(normalizedInput)
@@ -92,9 +100,7 @@ class MockLlmEngine(
             }
         }
 
-        return response
-            .chunked(14)
-            .map { it }
+        return response.chunked(14)
     }
 }
 

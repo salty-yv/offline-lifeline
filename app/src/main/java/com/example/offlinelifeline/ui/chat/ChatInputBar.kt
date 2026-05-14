@@ -1,62 +1,170 @@
 package com.example.offlinelifeline.ui.chat
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.core.model.Attachment
 
 @Composable
 fun ChatInputBar(
     text: String,
+    pendingImages: List<Attachment.Image>,
+    isProcessingImage: Boolean,
     canSend: Boolean,
     isGenerating: Boolean,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    onPickImage: () -> Unit,
+    onOpenCamera: () -> Unit,
+    onRemoveImage: (Attachment.Image) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChanged,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("描述你现在的情况") },
-            minLines = 1,
-            maxLines = 4,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(
-                onSend = {
-                    if (canSend) onSend()
-                }
-            ),
-            enabled = !isGenerating
-        )
-
-        if (isGenerating) {
-            TextButton(onClick = onStop) {
-                Text("停止")
-            }
-        } else {
-            Button(
-                onClick = onSend,
-                enabled = canSend
+        if (pendingImages.isNotEmpty()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
             ) {
-                Text("发送")
+                items(
+                    items = pendingImages,
+                    key = { it.localPath }
+                ) { image ->
+                    PendingImagePreview(
+                        image = image,
+                        onRemove = { onRemoveImage(image) }
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AssistChip(
+                enabled = !isGenerating && !isProcessingImage,
+                onClick = onOpenCamera,
+                label = { Text("拍照") }
+            )
+            AssistChip(
+                enabled = !isGenerating && !isProcessingImage,
+                onClick = onPickImage,
+                label = { Text("相册") }
+            )
+            if (isProcessingImage) {
+                Text(
+                    text = "正在处理图片",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = text,
+                onValueChange = onTextChanged,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("描述你的情况，也可以附加图片") },
+                minLines = 1,
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        if (canSend) onSend()
+                    }
+                ),
+                enabled = !isGenerating
+            )
+
+            if (isGenerating) {
+                TextButton(onClick = onStop) {
+                    Text("停止")
+                }
+            } else {
+                Button(
+                    onClick = onSend,
+                    enabled = canSend
+                ) {
+                    Text("发送")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PendingImagePreview(
+    image: Attachment.Image,
+    onRemove: () -> Unit
+) {
+    val bitmap = remember(image.localPath) {
+        BitmapFactory.decodeFile(image.localPath)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "pending image",
+                    modifier = Modifier.size(58.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = "图片",
+                    modifier = Modifier.size(58.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            TextButton(onClick = onRemove) {
+                Text("删除")
             }
         }
     }
