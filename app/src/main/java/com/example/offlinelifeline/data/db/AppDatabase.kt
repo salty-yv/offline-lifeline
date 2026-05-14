@@ -5,12 +5,13 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
+        ChatConversationEntity::class,
         ChatMessageEntity::class,
         DebugLogEntity::class,
         EmergencyCardEntity::class,
         GuideEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

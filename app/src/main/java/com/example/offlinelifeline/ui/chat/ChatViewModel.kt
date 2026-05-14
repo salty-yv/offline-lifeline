@@ -38,7 +38,13 @@ class ChatViewModel(
 
     init {
         viewModelScope.launch {
-            _uiState.update { it.copy(messages = chatRepository.getMessages()) }
+            val activeConversation = chatRepository.ensureActiveConversation()
+            _uiState.update {
+                it.copy(
+                    selectedConversationId = activeConversation.id,
+                    messages = chatRepository.getMessages(activeConversation.id)
+                )
+            }
             _uiState.update { it.copy(modelAssetState = ModelRuntimeState.Checking) }
             val modelCheck = modelAssetManager.checkModel()
             _uiState.update { it.copy(modelAssetState = modelCheck.runtimeState) }
@@ -49,6 +55,12 @@ class ChatViewModel(
                         it.copy(errorMessage = throwable.message ?: "模型初始化失败")
                     }
                 }
+        }
+
+        viewModelScope.launch {
+            chatRepository.observeConversations().collect { conversations ->
+                _uiState.update { it.copy(conversations = conversations) }
+            }
         }
 
         viewModelScope.launch {
@@ -81,6 +93,7 @@ class ChatViewModel(
 
     fun sendMessage() {
         val state = _uiState.value
+        val conversationId = state.selectedConversationId ?: return
         val text = state.inputText.trim().ifBlank {
             if (state.pendingImages.isNotEmpty()) "我添加了一张现场图片，请先按保守原则给出文字辅助建议。" else ""
         }
@@ -113,7 +126,7 @@ class ChatViewModel(
         }
 
         generationJob = viewModelScope.launch {
-            chatRepository.saveMessage(userMessage)
+            chatRepository.saveMessage(conversationId, userMessage)
 
             val preparedResponse = survivalAgent.prepareResponse(
                 userInput = text,
@@ -138,6 +151,7 @@ class ChatViewModel(
 
                     if (chunk.isFinal) {
                         chatRepository.saveMessage(
+                            conversationId,
                             assistantMessageWithTools.copy(
                                 text = assistantText,
                                 isFinal = true
@@ -163,6 +177,79 @@ class ChatViewModel(
         }
     }
 
+    fun createConversation() {
+        generationJob?.cancel()
+        generationJob = null
+        _uiState.value.pendingImages.forEach(imagePreprocessor::deleteProcessedImage)
+        viewModelScope.launch {
+            llmEngine.stopGeneration()
+            llmEngine.resetConversation()
+            val conversation = chatRepository.createConversation()
+            _uiState.update {
+                it.copy(
+                    selectedConversationId = conversation.id,
+                    messages = emptyList(),
+                    inputText = "",
+                    pendingImages = emptyList(),
+                    isProcessingImage = false,
+                    isGenerating = false,
+                    errorMessage = null
+                )
+            }
+        }
+    }
+
+    fun selectConversation(conversationId: String) {
+        if (_uiState.value.selectedConversationId == conversationId) return
+        generationJob?.cancel()
+        generationJob = null
+        _uiState.value.pendingImages.forEach(imagePreprocessor::deleteProcessedImage)
+        viewModelScope.launch {
+            llmEngine.stopGeneration()
+            llmEngine.resetConversation()
+            _uiState.update {
+                it.copy(
+                    selectedConversationId = conversationId,
+                    messages = chatRepository.getMessages(conversationId),
+                    inputText = "",
+                    pendingImages = emptyList(),
+                    isProcessingImage = false,
+                    isGenerating = false,
+                    errorMessage = null
+                )
+            }
+        }
+    }
+
+    fun deleteConversation(conversationId: String) {
+        val isDeletingActive = _uiState.value.selectedConversationId == conversationId
+        if (isDeletingActive) {
+            generationJob?.cancel()
+            generationJob = null
+            _uiState.value.pendingImages.forEach(imagePreprocessor::deleteProcessedImage)
+        }
+        viewModelScope.launch {
+            if (isDeletingActive) {
+                llmEngine.stopGeneration()
+                llmEngine.resetConversation()
+            }
+            val nextConversation = chatRepository.deleteConversation(conversationId)
+            if (isDeletingActive) {
+                _uiState.update {
+                    it.copy(
+                        selectedConversationId = nextConversation.id,
+                        messages = chatRepository.getMessages(nextConversation.id),
+                        inputText = "",
+                        pendingImages = emptyList(),
+                        isProcessingImage = false,
+                        isGenerating = false,
+                        errorMessage = "对话已删除。"
+                    )
+                }
+            }
+        }
+    }
+
     fun stopGeneration() {
         if (!_uiState.value.isGenerating) return
 
@@ -174,6 +261,28 @@ class ChatViewModel(
                 it.copy(
                     isGenerating = false,
                     errorMessage = "本次生成已停止，未完成回答不会写入历史。"
+                )
+            }
+        }
+    }
+
+    fun clearConversation() {
+        val conversationId = _uiState.value.selectedConversationId ?: return
+        generationJob?.cancel()
+        generationJob = null
+        _uiState.value.pendingImages.forEach(imagePreprocessor::deleteProcessedImage)
+        viewModelScope.launch {
+            llmEngine.stopGeneration()
+            chatRepository.clearMessages(conversationId)
+            llmEngine.resetConversation()
+            _uiState.update {
+                it.copy(
+                    messages = emptyList(),
+                    inputText = "",
+                    pendingImages = emptyList(),
+                    isProcessingImage = false,
+                    isGenerating = false,
+                    errorMessage = "对话已清空，上下文已重置。"
                 )
             }
         }

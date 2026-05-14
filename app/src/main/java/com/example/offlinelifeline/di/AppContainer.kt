@@ -2,6 +2,8 @@ package com.example.offlinelifeline.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.offlinelifeline.agent.ActionPlanner
 import com.example.offlinelifeline.agent.ContextManager
 import com.example.offlinelifeline.agent.IntentClassifier
@@ -39,7 +41,9 @@ class AppContainer(context: Context) {
             appContext,
             AppDatabase::class.java,
             DATABASE_NAME
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     val chatRepository: ChatRepository by lazy {
@@ -140,5 +144,43 @@ class AppContainer(context: Context) {
 
     private companion object {
         const val DATABASE_NAME = "offline_lifeline.db"
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS chat_conversations (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "ALTER TABLE chat_messages ADD COLUMN conversationId TEXT NOT NULL DEFAULT 'legacy'"
+                )
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO chat_conversations (
+                        id,
+                        title,
+                        createdAtMillis,
+                        updatedAtMillis
+                    )
+                    SELECT
+                        'legacy',
+                        '旧对话',
+                        MIN(createdAtMillis),
+                        MAX(createdAtMillis)
+                    FROM chat_messages
+                    WHERE EXISTS (SELECT 1 FROM chat_messages)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_chat_messages_conversationId ON chat_messages(conversationId)"
+                )
+            }
+        }
     }
 }
