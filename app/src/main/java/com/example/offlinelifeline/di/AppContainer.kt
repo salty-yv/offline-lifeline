@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.offlinelifeline.agent.ActionPlanner
 import com.example.offlinelifeline.agent.ContextManager
+import com.example.offlinelifeline.agent.IntentClassifier
 import com.example.offlinelifeline.agent.PromptBuilder
 import com.example.offlinelifeline.agent.QuestionPlanner
 import com.example.offlinelifeline.agent.RiskClassifier
@@ -93,6 +94,7 @@ class AppContainer(context: Context) {
         SurvivalAgent(
             contextManager = ContextManager(),
             riskClassifier = RiskClassifier(),
+            intentClassifier = IntentClassifier(),
             questionPlanner = QuestionPlanner(),
             actionPlanner = ActionPlanner(),
             toolRouter = ToolRouter(),

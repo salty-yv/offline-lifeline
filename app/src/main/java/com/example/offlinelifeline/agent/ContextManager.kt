@@ -50,24 +50,43 @@ class ContextManager {
 
     private fun inferCanMove(text: String): Boolean? {
         return when {
-            text.containsAny("不能动", "走不了", "无法移动", "不能移动", "不能负重") -> false
-            text.containsAny("能走", "可以走", "能移动", "还能走", "能缓慢移动") -> true
+            text.containsAny(
+                "不能动", "走不了", "无法移动", "不能移动", "不能负重",
+                "can't move", "cannot move", "can't walk", "unable to walk",
+                "immobile", "can't stand"
+            ) -> false
+            text.containsAny(
+                "能走", "可以走", "能移动", "还能走", "能缓慢移动",
+                "can walk", "able to walk", "can move", "can still walk", "slowly walking"
+            ) -> true
             else -> null
         }
     }
 
     private fun inferHasWater(text: String): Boolean? {
         return when {
-            text.containsAny("没水", "没有水", "无水") -> false
-            text.containsAny("有水", "带了水", "水壶", "矿泉水") -> true
+            text.containsAny(
+                "没水", "没有水", "无水",
+                "no water", "out of water", "no drinking water", "ran out of water"
+            ) -> false
+            text.containsAny(
+                "有水", "带了水", "水壶", "矿泉水",
+                "have water", "got water", "water bottle", "bottled water", "canteen"
+            ) -> true
             else -> null
         }
     }
 
     private fun inferHasWarmClothes(text: String): Boolean? {
         return when {
-            text.containsAny("没带衣服", "没有保暖", "没保暖") -> false
-            text.containsAny("保暖", "外套", "冲锋衣", "毯子", "睡袋", "干衣服") -> true
+            text.containsAny(
+                "没带衣服", "没有保暖", "没保暖",
+                "no warm clothes", "no jacket", "nothing warm", "no gear"
+            ) -> false
+            text.containsAny(
+                "保暖", "外套", "冲锋衣", "毯子", "睡袋", "干衣服",
+                "jacket", "coat", "blanket", "sleeping bag", "warm clothes", "warm gear"
+            ) -> true
             else -> null
         }
     }

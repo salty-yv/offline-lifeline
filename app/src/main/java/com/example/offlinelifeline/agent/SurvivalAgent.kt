@@ -12,9 +12,11 @@ import com.example.offlinelifeline.safety.SafetyValidationResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
+
 class SurvivalAgent(
     private val contextManager: ContextManager,
     private val riskClassifier: RiskClassifier,
+    private val intentClassifier: IntentClassifier,
     private val questionPlanner: QuestionPlanner,
     private val actionPlanner: ActionPlanner,
     private val toolRouter: ToolRouter,
@@ -36,10 +38,16 @@ class SurvivalAgent(
         val baseContext = contextManager.buildContext(contextMessages)
         val risks = riskClassifier.classify(userInput, baseContext)
         val context = baseContext.copy(riskDomains = risks)
+        val intent = intentClassifier.classify(userInput)
         val questions = questionPlanner.planQuestions(context)
         val tools = toolRouter.recommendTools(risks, context)
         val actionStructure = actionPlanner.buildActionStructure(risks, context, questions)
-        val systemInstruction = promptBuilder.buildSystemInstruction(context, actionStructure, tools)
+        val systemInstruction = promptBuilder.buildSystemInstruction(
+            context = context,
+            actionStructure = actionStructure,
+            toolRecommendations = tools,
+            intent = intent
+        )
         val safetyInstruction = promptBuilder.buildSafetyInstruction(
             safetyKernel.buildSafetyInstruction(risks)
         )
