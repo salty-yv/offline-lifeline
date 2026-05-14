@@ -5,6 +5,8 @@ import com.example.offlinelifeline.core.common.AppDispatchers
 import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.core.model.ModelRuntimeState
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class LiteRtLmEngine(
     private val modelAssetManager: ModelAssetManager,
@@ -27,6 +30,10 @@ class LiteRtLmEngine(
     private var engine: Engine? = null
     private var conversation: Conversation? = null
     private var stopRequested = false
+    private var imageInputEnabled = false
+
+    override val supportsImageInput: Boolean
+        get() = imageInputEnabled
 
     override suspend fun initialize(): Result<Unit> {
         if (_runtimeState.value == ModelRuntimeState.Ready) {
@@ -46,23 +53,32 @@ class LiteRtLmEngine(
                 ?: error("Model path is unavailable.")
 
             _runtimeState.value = ModelRuntimeState.Loading
-            debugLogger.info(TAG, "litertlm_initialize_start modelPath=$modelPath backend=CPU")
+            debugLogger.info(TAG, "litertlm_initialize_start modelPath=$modelPath backend=CPU visionBackend=GPU")
 
             withContext(dispatchers.io) {
                 Engine.setNativeMinLogSeverity(LogSeverity.ERROR)
-                val config = EngineConfig(
-                    modelPath = modelPath,
-                    backend = Backend.CPU(),
-                    cacheDir = modelAssetManager.cacheDirPath
-                )
-                val createdEngine = Engine(config)
-                createdEngine.initialize()
+                val createdEngine = runCatching {
+                    createEngine(modelPath = modelPath, enableVision = true)
+                }.onSuccess {
+                    imageInputEnabled = true
+                    debugLogger.info(TAG, "litertlm_vision_backend_enabled backend=GPU maxNumImages=$MAX_IMAGES")
+                }.getOrElse { visionThrowable ->
+                    debugLogger.warning(
+                        TAG,
+                        "litertlm_vision_backend_failed_retrying_text_only reason=${visionThrowable.message}. Check model accelerator allowlist for visionAccelerator=gpu."
+                    )
+                    imageInputEnabled = false
+                    createEngine(modelPath = modelPath, enableVision = false)
+                }
                 engine = createdEngine
                 conversation = createdEngine.createConversation()
             }
 
             _runtimeState.value = ModelRuntimeState.Ready
-            debugLogger.info(TAG, "litertlm_initialize_success elapsedMs=${SystemClock.elapsedRealtime() - startedAt}")
+            debugLogger.info(
+                TAG,
+                "litertlm_initialize_success elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
+            )
         }.onFailure { throwable ->
             _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM initialization failed")
             debugLogger.error(
@@ -86,11 +102,17 @@ class LiteRtLmEngine(
         var outputChars = 0
 
         try {
+            val contents = buildContents(request, prompt)
             debugLogger.info(
                 TAG,
-                "litertlm_generation_start promptChars=${prompt.length} imageCount=${request.imagePaths.size} supportsImageInput=$supportsImageInput"
+                "litertlm_generation_start promptChars=${prompt.length} imageCount=${request.imagePaths.size} supportsImageInput=$supportsImageInput multimodal=${contents != null}"
             )
-            activeConversation.sendMessageAsync(prompt).collect { message ->
+            val outputFlow = if (contents != null) {
+                activeConversation.sendMessageAsync(contents)
+            } else {
+                activeConversation.sendMessageAsync(prompt)
+            }
+            outputFlow.collect { message ->
                 if (stopRequested) throw CancellationException("LiteRT-LM generation stopped")
 
                 val text = message.toString()
@@ -182,7 +204,39 @@ class LiteRtLmEngine(
         }
     }
 
+    private suspend fun buildContents(request: InferenceRequest, prompt: String): Contents? {
+        if (request.imagePaths.isEmpty() || !supportsImageInput) return null
+
+        val imageContents = request.imagePaths
+            .take(MAX_IMAGES)
+            .mapNotNull { path ->
+                runCatching {
+                    Content.ImageBytes(File(path).readBytes())
+                }.onFailure { throwable ->
+                    debugLogger.warning(TAG, "litertlm_image_read_failed path=$path reason=${throwable.message}")
+                }.getOrNull()
+            }
+
+        if (imageContents.isEmpty()) return null
+
+        return Contents.of(
+            listOf(Content.Text(prompt)) + imageContents
+        )
+    }
+
+    private fun createEngine(modelPath: String, enableVision: Boolean): Engine {
+        val config = EngineConfig(
+            modelPath = modelPath,
+            backend = Backend.CPU(),
+            visionBackend = if (enableVision) Backend.GPU() else null,
+            maxNumImages = if (enableVision) MAX_IMAGES else null,
+            cacheDir = modelAssetManager.cacheDirPath
+        )
+        return Engine(config).also { it.initialize() }
+    }
+
     private companion object {
         const val TAG = "LiteRtLmEngine"
+        const val MAX_IMAGES = 3
     }
 }

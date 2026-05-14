@@ -64,9 +64,9 @@ class ImagePreprocessor(
         val normalized = rotateIfNeeded(decoded, orientation)
         val scaled = scaleToMaxEdge(normalized)
 
-        val outputFile = createTempFile(prefix = "processed_", suffix = ".jpg")
+        val outputFile = createTempFile(prefix = "processed_", suffix = ".png")
         FileOutputStream(outputFile).use { output ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+            scaled.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)
         }
 
         val result = Attachment.Image(
@@ -131,7 +131,7 @@ class ImagePreprocessor(
     }
 
     private companion object {
-        const val MAX_EDGE = 1280
-        const val JPEG_QUALITY = 86
+        const val MAX_EDGE = 1024
+        const val PNG_QUALITY = 100
     }
 }
