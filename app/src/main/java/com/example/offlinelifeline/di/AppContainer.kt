@@ -19,6 +19,7 @@ import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.data.datastore.SettingsStore
 import com.example.offlinelifeline.data.db.AppDatabase
 import com.example.offlinelifeline.data.db.GuideChunkSeeder
+import com.example.offlinelifeline.agent.rag.GuideRetrievalService
 import com.example.offlinelifeline.data.repository.ChatRepository
 import com.example.offlinelifeline.data.repository.EmergencyCardRepository
 import com.example.offlinelifeline.data.repository.GuideRepository
@@ -101,6 +102,10 @@ class AppContainer(context: Context) {
 
     val guideChunkSeeder by lazy {
         GuideChunkSeeder(appContext, guideChunkDao)
+    }
+
+    val guideRetrievalService: GuideRetrievalService by lazy {
+        GuideRetrievalService(guideChunkDao)
     }
 
     val settingsStore: SettingsStore by lazy {
