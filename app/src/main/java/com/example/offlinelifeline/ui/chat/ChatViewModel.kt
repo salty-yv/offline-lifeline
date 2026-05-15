@@ -83,6 +83,10 @@ class ChatViewModel(
         _uiState.update { it.copy(inputText = text, errorMessage = null) }
     }
 
+    fun toggleFreeChatMode() {
+        _uiState.update { it.copy(isFreeChatMode = !it.isFreeChatMode) }
+    }
+
     fun createCameraRawFile(): File = imagePreprocessor.createCameraRawFile()
 
     fun addImageFromUri(uri: Uri) {
@@ -149,7 +153,8 @@ class ChatViewModel(
                 userInput = text,
                 history = _uiState.value.messages.filter { it.id != assistantMessage.id },
                 imagePaths = pendingImages.map { it.localPath },
-                languageTag = languageTag
+                languageTag = languageTag,
+                forceIntent = if (state.isFreeChatMode) com.example.offlinelifeline.agent.UserIntent.FREE_CHAT else null
             )
             val assistantMessageWithTools = assistantMessage.copy(
                 toolRecommendations = preparedResponse.response.toolRecommendations,

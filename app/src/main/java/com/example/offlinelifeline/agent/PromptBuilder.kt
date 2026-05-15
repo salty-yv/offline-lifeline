@@ -11,8 +11,10 @@ class PromptBuilder {
      * 根据 [intent] 决定注入不同的输出格式要求：
      * - [UserIntent.EMERGENCY] / [UserIntent.UNKNOWN]：注入6段应急参考框架，格式为建议而非强制
      * - [UserIntent.FOLLOW_UP]：不注入任何格式要求，LLM 自然延续上下文作答
+     * - [UserIntent.FREE_CHAT]：完全不注入格式和行动计划，仅保留 RAG 上下文和语言要求
      * - [UserIntent.PROCEDURAL]：注入步骤列表格式，不追问电量/体力等应急信息
      */
+
     fun buildSystemInstruction(
         context: AgentContext,
         actionStructure: String,
@@ -151,6 +153,19 @@ class PromptBuilder {
                         appendLine("2. 步骤（用编号列出，每步一行，简洁）")
                         appendLine("3. 注意事项（如有，不超过 3 条）")
                         appendLine("不要追问用户的电量、体力或装备，除非问题与处境直接相关。")
+                    }
+                }
+                UserIntent.FREE_CHAT -> {
+                    // 自由对话：完全不注入任何格式和行动计划约束
+                    // RAG 上下文已在上方 [Local Guide Context] 节い进入，这里只告知 LLM 延续对话即可
+                    if (useEnglish) {
+                        appendLine("You are in free chat mode. The user is having a casual or exploratory conversation.")
+                        appendLine("Answer naturally and conversationally. You may reference the Local Guide Context above if it is helpful.")
+                        appendLine("Do not apply any emergency framework, numbered structure, or fixed output template.")
+                    } else {
+                        appendLine("当前处于自由对话模式。用户在进行随意性或探索性的提问。")
+                        appendLine("请自然地以对话语气回答。如果上方有本地指南内容，可以引用但不强要。")
+                        appendLine("不要套用应急框架、编号结构或任何固定模板。")
                     }
                 }
             }

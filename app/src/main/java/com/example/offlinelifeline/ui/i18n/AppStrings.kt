@@ -51,12 +51,15 @@ interface AppStrings {
     val gallery: String
     val processingImage: String
     val chatInputPlaceholder: String
+    val freeChatInputPlaceholder: String
     val stop: String
     val send: String
     val image: String
     val pendingImageContentDescription: String
     val attachedImageContentDescription: String
     val recommendedTools: String
+    val freeChatModeOn: String
+    val freeChatModeOff: String
 
     val generatingReply: String
     val checkingRealModel: String
@@ -164,12 +167,15 @@ object ZhAppStrings : AppStrings {
     override val gallery = "相册"
     override val processingImage = "正在处理图片"
     override val chatInputPlaceholder = "描述你的情况，也可以附加图片"
+    override val freeChatInputPlaceholder = "随便聊，内置知识库仍可检索"
     override val stop = "停止"
     override val send = "发送"
     override val image = "图片"
     override val pendingImageContentDescription = "待发送图片"
     override val attachedImageContentDescription = "已附加图片"
     override val recommendedTools = "推荐工具"
+    override val freeChatModeOn = "自由对话"
+    override val freeChatModeOff = "自由对话"
 
     override val generatingReply = "正在生成回复..."
     override val checkingRealModel = "正在检查真实模型文件..."
@@ -307,12 +313,15 @@ object EnAppStrings : AppStrings {
     override val gallery = "Gallery"
     override val processingImage = "Processing image"
     override val chatInputPlaceholder = "Describe your situation, or attach an image"
+    override val freeChatInputPlaceholder = "Chat freely, local knowledge base still active"
     override val stop = "Stop"
     override val send = "Send"
     override val image = "Image"
     override val pendingImageContentDescription = "Pending image"
     override val attachedImageContentDescription = "Attached image"
     override val recommendedTools = "Recommended tools"
+    override val freeChatModeOn = "Free chat"
+    override val freeChatModeOff = "Free chat"
 
     override val generatingReply = "Generating reply..."
     override val checkingRealModel = "Checking real model files..."

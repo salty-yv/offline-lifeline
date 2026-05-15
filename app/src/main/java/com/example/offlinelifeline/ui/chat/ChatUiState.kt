@@ -13,6 +13,7 @@ data class ChatUiState(
     val pendingImages: List<Attachment.Image> = emptyList(),
     val isProcessingImage: Boolean = false,
     val isGenerating: Boolean = false,
+    val isFreeChatMode: Boolean = false,
     val runtimeState: ModelRuntimeState = ModelRuntimeState.NotChecked,
     val modelAssetState: ModelRuntimeState = ModelRuntimeState.NotChecked,
     val errorMessage: String? = null

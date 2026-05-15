@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -38,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -150,8 +152,21 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // 自由对话模式切换
+                FilterChip(
+                    selected = uiState.isFreeChatMode,
+                    onClick = viewModel::toggleFreeChatMode,
+                    label = {
+                        Text(
+                            if (uiState.isFreeChatMode) strings.freeChatModeOn
+                            else strings.freeChatModeOff
+                        )
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 if (showHistoryButton) {
                     TextButton(onClick = { scope.launch { drawerState.open() } }) {
                         Text(strings.history)
@@ -197,6 +212,7 @@ fun ChatScreen(
                 isProcessingImage = uiState.isProcessingImage,
                 canSend = uiState.canSend,
                 isGenerating = uiState.isGenerating,
+                isFreeChatMode = uiState.isFreeChatMode,
                 onTextChanged = viewModel::onInputChanged,
                 onSend = viewModel::sendMessage,
                 onStop = viewModel::stopGeneration,

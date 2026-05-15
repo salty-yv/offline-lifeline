@@ -39,6 +39,7 @@ fun ChatInputBar(
     isProcessingImage: Boolean,
     canSend: Boolean,
     isGenerating: Boolean,
+    isFreeChatMode: Boolean = false,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -105,7 +106,12 @@ fun ChatInputBar(
                 value = text,
                 onValueChange = onTextChanged,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text(strings.chatInputPlaceholder) },
+                placeholder = {
+                    Text(
+                        if (isFreeChatMode) strings.freeChatInputPlaceholder
+                        else strings.chatInputPlaceholder
+                    )
+                },
                 minLines = 1,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),

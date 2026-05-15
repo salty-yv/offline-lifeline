@@ -15,6 +15,7 @@ enum class UserIntent {
     EMERGENCY,   // 首次求救 / 新的应急处境描述
     PROCEDURAL,  // 操作步骤 / 制作方法查询
     FOLLOW_UP,   // 对话追问 / 补充信息，上下文已建立
+    FREE_CHAT,   // 自由对话：无格式约束，仅注入 RAG 上下文
     UNKNOWN      // 无法判断，降级为 EMERGENCY 处理
 }
 

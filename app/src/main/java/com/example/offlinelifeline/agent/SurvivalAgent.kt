@@ -37,7 +37,9 @@ class SurvivalAgent(
         userInput: String,
         history: List<ChatMessage>,
         imagePaths: List<String> = emptyList(),
-        languageTag: String = "zh-CN"
+        languageTag: String = "zh-CN",
+        /** 外部强制指定意图（如自由对话模式）；为 null 时自动分类 */
+        forceIntent: UserIntent? = null
     ): PreparedAgentResponse {
         val scopedHistory = contextManager.summarizeIfNeeded(history)
         val contextMessages = scopedHistory + ChatMessage(
@@ -49,12 +51,15 @@ class SurvivalAgent(
         val baseContext = contextManager.buildContext(contextMessages)
         val risks = riskClassifier.classify(userInput, baseContext)
         val context = baseContext.copy(riskDomains = risks)
-        // 历史中 USER 消息的数量即为已完成的对话轮次，用于区分首轮和追问
+        // 外部强制意图优先，否则根据轮次自动分类
         val previousTurns = history.count { it.role == ChatRole.USER }
-        val intent = intentClassifier.classify(userInput, previousTurns)
-        val questions = questionPlanner.planQuestions(context)
-        val tools = toolRouter.recommendTools(risks, context, languageTag)
-        val actionStructure = actionPlanner.buildActionStructure(risks, context, questions, languageTag)
+        val intent = forceIntent ?: intentClassifier.classify(userInput, previousTurns)
+        // 自由对话模式下跳过行动计划和工具推荐，节省推理开销
+        val isFreeChat = intent == UserIntent.FREE_CHAT
+        val questions = if (isFreeChat) emptyList() else questionPlanner.planQuestions(context)
+        val tools = if (isFreeChat) emptyList() else toolRouter.recommendTools(risks, context, languageTag)
+        val actionStructure = if (isFreeChat) ""
+            else actionPlanner.buildActionStructure(risks, context, questions, languageTag)
 
         // ── RAG 检索：在调用 LLM 前先拿本地 chunk ──────────────────────────────
         val ragChunks = guideRetrievalService
