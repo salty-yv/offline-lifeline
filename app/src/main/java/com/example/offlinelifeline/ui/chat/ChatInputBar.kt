@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.offlinelifeline.core.model.Attachment
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
@@ -40,6 +41,7 @@ fun ChatInputBar(
     canSend: Boolean,
     isGenerating: Boolean,
     isFreeChatMode: Boolean = false,
+    chatTextSizeSp: Int,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -108,10 +110,12 @@ fun ChatInputBar(
                 modifier = Modifier.weight(1f),
                 placeholder = {
                     Text(
-                        if (isFreeChatMode) strings.freeChatInputPlaceholder
-                        else strings.chatInputPlaceholder
+                        text = if (isFreeChatMode) strings.freeChatInputPlaceholder
+                        else strings.chatInputPlaceholder,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp)
                     )
                 },
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp),
                 minLines = 1,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),

@@ -64,6 +64,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsStore.setLanguageTag(tag) }
     }
 
+    fun setChatTextSizeSp(sizeSp: Int) {
+        viewModelScope.launch { settingsStore.setChatTextSizeSp(sizeSp) }
+    }
+
     fun enqueueDownload(manifest: ModelManifest) {
         val current = modelDownloadRepository.getDownloadState(manifest.modelId).value
         if (current is ModelDownloadState.Downloading || current is ModelDownloadState.Queued) return

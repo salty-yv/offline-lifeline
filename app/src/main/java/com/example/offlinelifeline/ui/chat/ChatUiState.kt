@@ -16,7 +16,8 @@ data class ChatUiState(
     val isFreeChatMode: Boolean = false,
     val runtimeState: ModelRuntimeState = ModelRuntimeState.NotChecked,
     val modelAssetState: ModelRuntimeState = ModelRuntimeState.NotChecked,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val chatTextSizeSp: Int = 16
 ) {
     val canSend: Boolean
         get() = (inputText.isNotBlank() || pendingImages.isNotEmpty()) && !isGenerating && !isProcessingImage

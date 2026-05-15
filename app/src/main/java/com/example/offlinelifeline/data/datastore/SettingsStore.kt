@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +23,9 @@ class SettingsStore(context: Context) {
             languageTag = preferences[Keys.LanguageTag] ?: "zh-CN",
             useMockEngine = preferences[Keys.UseMockEngine] ?: true,
             debugModeEnabled = preferences[Keys.DebugModeEnabled] ?: false,
-            activeModelId = preferences[Keys.ActiveModelId] ?: "e2b"
+            activeModelId = preferences[Keys.ActiveModelId] ?: "e2b",
+            chatTextSizeSp = (preferences[Keys.ChatTextSizeSp] ?: DEFAULT_CHAT_TEXT_SIZE_SP)
+                .coerceIn(MIN_CHAT_TEXT_SIZE_SP, MAX_CHAT_TEXT_SIZE_SP)
         )
     }
 
@@ -51,11 +54,27 @@ class SettingsStore(context: Context) {
         }
     }
 
+    suspend fun setChatTextSizeSp(sizeSp: Int) {
+        dataStore.edit { preferences ->
+            preferences[Keys.ChatTextSizeSp] = sizeSp.coerceIn(
+                MIN_CHAT_TEXT_SIZE_SP,
+                MAX_CHAT_TEXT_SIZE_SP
+            )
+        }
+    }
+
     private object Keys {
         val LanguageTag = stringPreferencesKey("language_tag")
         val UseMockEngine = booleanPreferencesKey("use_mock_engine")
         val DebugModeEnabled = booleanPreferencesKey("debug_mode_enabled")
         val ActiveModelId = stringPreferencesKey("active_model_id")
+        val ChatTextSizeSp = intPreferencesKey("chat_text_size_sp")
+    }
+
+    private companion object {
+        const val DEFAULT_CHAT_TEXT_SIZE_SP = 16
+        const val MIN_CHAT_TEXT_SIZE_SP = 14
+        const val MAX_CHAT_TEXT_SIZE_SP = 22
     }
 }
 
@@ -63,5 +82,6 @@ data class AppSettings(
     val languageTag: String = "zh-CN",
     val useMockEngine: Boolean = true,
     val debugModeEnabled: Boolean = false,
-    val activeModelId: String = "e2b"
+    val activeModelId: String = "e2b",
+    val chatTextSizeSp: Int = 16
 )

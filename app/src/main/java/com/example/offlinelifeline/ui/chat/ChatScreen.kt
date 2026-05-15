@@ -214,6 +214,7 @@ fun ChatScreen(
                     ChatMessageBubble(
                         message = message,
                         onToolSelected = onToolSelected,
+                        chatTextSizeSp = uiState.chatTextSizeSp,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
@@ -228,6 +229,7 @@ fun ChatScreen(
                 canSend = uiState.canSend,
                 isGenerating = uiState.isGenerating,
                 isFreeChatMode = uiState.isFreeChatMode,
+                chatTextSizeSp = uiState.chatTextSizeSp,
                 onTextChanged = viewModel::onInputChanged,
                 onSend = viewModel::sendMessage,
                 onStop = viewModel::stopGeneration,

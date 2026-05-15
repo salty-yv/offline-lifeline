@@ -2,7 +2,6 @@ package com.example.offlinelifeline.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,9 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
@@ -52,7 +54,6 @@ fun SettingsScreen(
             )
         }
 
-        // ── 语言设置 Card ─────────────────────────────────────────────────────
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -91,7 +92,14 @@ fun SettingsScreen(
             }
         }
 
-        // ── 离线模型管理 Card ──────────────────────────────────────────────────
+        item {
+            ChatTextSizeCard(
+                languageTag = strings.languageTag,
+                chatTextSizeSp = settings.chatTextSizeSp,
+                onChatTextSizeChanged = viewModel::setChatTextSizeSp
+            )
+        }
+
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -147,6 +155,64 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ChatTextSizeCard(
+    languageTag: String,
+    chatTextSizeSp: Int,
+    onChatTextSizeChanged: (Int) -> Unit
+) {
+    val isEnglish = languageTag.startsWith("en")
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (isEnglish) "Chat text size" else "对话字号",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = if (isEnglish) {
+                            "Adjust the message text size on the chat page."
+                        } else {
+                            "调整对话页面消息文字的大小。"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = "${chatTextSizeSp}sp",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Slider(
+                value = chatTextSizeSp.toFloat(),
+                onValueChange = { onChatTextSizeChanged(it.roundToInt()) },
+                valueRange = 14f..22f,
+                steps = 7
+            )
         }
     }
 }

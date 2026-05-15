@@ -69,6 +69,7 @@ class ChatViewModel(
         viewModelScope.launch {
             settingsStore.settings.collect { settings ->
                 languageTag = settings.languageTag
+                _uiState.update { it.copy(chatTextSizeSp = settings.chatTextSizeSp) }
                 if (activeModelId != settings.activeModelId) {
                     activeModelId = settings.activeModelId
                     modelRefreshJob?.cancel()

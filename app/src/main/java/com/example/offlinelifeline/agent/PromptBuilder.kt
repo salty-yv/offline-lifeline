@@ -41,7 +41,7 @@ class PromptBuilder {
             appendLine(if (useEnglish) "English" else "Simplified Chinese")
             appendLine("Always reply in the reply language above, even if the user input uses another language.")
             // 纯文本约束：禁止 LaTeX、Markdown 特殊符号
-            appendLine("Output plain text only. Do NOT use LaTeX, Markdown, or any special symbols such as $, \\, ^, →, ←, ✓, ★, or math notation like \\rightarrow or \\times. Use only numbered lists (1. 2. 3.) and plain dashes (-) for bullet points.")
+            appendLine("Output plain text only. Do NOT use LaTeX, Markdown, or any special symbols such as $, \\, ^, →, ←, ✓, ★, or math notation. If you need a list, use numbered lists (1. 2. 3.) or plain dashes (-). For short or direct answers, write in natural prose — do NOT force a numbered list.")
             appendLine("Do NOT start your response with filler phrases such as '保持冷静', '不要慌', '深呼吸', '首先，保持冷静', 'Stay calm', 'Don't panic', or any reassurance opener. Every sentence must be a concrete, actionable instruction.")
             appendLine()
 

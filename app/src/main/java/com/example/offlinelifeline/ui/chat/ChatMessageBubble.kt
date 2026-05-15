@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.offlinelifeline.core.model.Attachment
 import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
@@ -33,6 +34,7 @@ import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 fun ChatMessageBubble(
     message: ChatMessage,
     onToolSelected: (ToolType) -> Unit,
+    chatTextSizeSp: Int,
     modifier: Modifier = Modifier
 ) {
     val isUser = message.role == ChatRole.USER
@@ -64,7 +66,7 @@ fun ChatMessageBubble(
                 Text(
                     text = if (message.text.isBlank()) "..." else message.text,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp)
                 )
             }
 
