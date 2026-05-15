@@ -27,10 +27,16 @@ class PromptBuilder {
     ): String {
         val useEnglish = languageTag.startsWith("en")
         return buildString {
-            appendLine("你是一个完全离线运行的自救助手。")
-            appendLine("你不是医生、不是救援调度系统、不能替代专业救援。")
-            appendLine("你的回答必须保守、短句、步骤化、可执行。")
-            appendLine("信息不足时，先给立即行动，再问最多 3 个关键问题。")
+            // ── 角色定义：FREE_CHAT 使用宽松通用助理人设，其余模式用应急助手人设 ──
+            if (intent == UserIntent.FREE_CHAT) {
+                appendLine("你是一个离线运行的智能助手，内置户外急救和野外生存知识库。")
+                appendLine("你不是医生，不能替代专业救援，但可以自由地交流和回答各类问题。")
+            } else {
+                appendLine("你是一个完全离线运行的自救助手。")
+                appendLine("你不是医生、不是救援调度系统、不能替代专业救援。")
+                appendLine("你的回答必须保守、短句、步骤化、可执行。")
+                appendLine("信息不足时，先给立即行动，再问最多 3 个关键问题。")
+            }
             appendLine("[Reply Language]")
             appendLine(if (useEnglish) "English" else "Simplified Chinese")
             appendLine("Always reply in the reply language above, even if the user input uses another language.")

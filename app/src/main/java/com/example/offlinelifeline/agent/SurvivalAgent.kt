@@ -84,13 +84,19 @@ class SurvivalAgent(
             languageTag = languageTag,
             ragContext = ragContext           // ← 注入本地指南上下文
         )
-        val safetyInstruction = promptBuilder.buildSafetyInstruction(
-            safetyKernel.buildSafetyInstruction(
-                riskDomains = risks,
-                hasImageInput = imagePaths.isNotEmpty(),
-                imageInputSupported = llmEngine.supportsImageInput
+        // 自由对话模式不注入安全约束：避免"ask at most 3 key questions"等规则
+        // 触发 LLM 在普通对话末尾追加"是否遇到紧急情况"之类的提问。
+        val safetyInstruction = if (isFreeChat) {
+            ""
+        } else {
+            promptBuilder.buildSafetyInstruction(
+                safetyKernel.buildSafetyInstruction(
+                    riskDomains = risks,
+                    hasImageInput = imagePaths.isNotEmpty(),
+                    imageInputSupported = llmEngine.supportsImageInput
+                )
             )
-        )
+        }
 
         return PreparedAgentResponse(
             request = InferenceRequest(
