@@ -54,8 +54,8 @@ fun ChatInputBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         if (pendingImages.isNotEmpty()) {
             LazyRow(
@@ -78,7 +78,7 @@ fun ChatInputBar(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AssistChip(
@@ -102,22 +102,32 @@ fun ChatInputBar(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            val compactPlaceholder = if (strings.languageTag.startsWith("en")) {
+                "Message or image"
+            } else {
+                "描述情况或附图"
+            }
+            val compactFreeChatPlaceholder = if (strings.languageTag.startsWith("en")) {
+                "Free chat"
+            } else {
+                "自由聊天"
+            }
             OutlinedTextField(
                 value = text,
                 onValueChange = onTextChanged,
                 modifier = Modifier.weight(1f),
                 placeholder = {
                     Text(
-                        text = if (isFreeChatMode) strings.freeChatInputPlaceholder
-                        else strings.chatInputPlaceholder,
+                        text = if (isFreeChatMode) compactFreeChatPlaceholder else compactPlaceholder,
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp)
                     )
                 },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp),
                 minLines = 1,
-                maxLines = 4,
+                maxLines = 3,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(
                     onSend = {

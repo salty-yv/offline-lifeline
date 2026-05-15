@@ -26,13 +26,11 @@ fun RuntimeStatusBanner(
         modelAssetState is ModelRuntimeState.Checking -> strings.checkingRealModel
         modelAssetState is ModelRuntimeState.Missing -> strings.realModelMissing
         modelAssetState is ModelRuntimeState.ChecksumFailed -> strings.checksumFailed
-        modelAssetState is ModelRuntimeState.ReadyToLoad && runtimeState is ModelRuntimeState.Ready -> strings.realModelReady
-        modelAssetState is ModelRuntimeState.ReadyToLoad -> strings.realModelReadyToLoad
         runtimeState is ModelRuntimeState.Loading -> strings.mockModelLoading
-        runtimeState is ModelRuntimeState.Ready -> strings.mockModelReady
         runtimeState is ModelRuntimeState.Failed -> runtimeState.message
         runtimeState is ModelRuntimeState.Released -> strings.mockModelReleased
-        else -> strings.mockModelPending
+        runtimeState is ModelRuntimeState.NotChecked -> strings.mockModelPending
+        else -> return
     }
 
     val containerColor = if (errorMessage != null || modelAssetState is ModelRuntimeState.ChecksumFailed) {

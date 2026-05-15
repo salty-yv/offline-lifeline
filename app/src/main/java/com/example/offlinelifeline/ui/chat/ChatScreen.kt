@@ -205,7 +205,7 @@ fun ChatScreen(
                     .weight(1f)
                     .fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 items(
                     items = uiState.messages,
@@ -215,7 +215,7 @@ fun ChatScreen(
                         message = message,
                         onToolSelected = onToolSelected,
                         chatTextSizeSp = uiState.chatTextSizeSp,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
             }

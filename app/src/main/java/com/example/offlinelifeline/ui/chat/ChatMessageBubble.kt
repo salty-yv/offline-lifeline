@@ -46,7 +46,7 @@ fun ChatMessageBubble(
     val textColor = if (isUser) {
         MaterialTheme.colorScheme.onPrimaryContainer
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme.colorScheme.onSurface
     }
 
     Row(
@@ -55,18 +55,36 @@ fun ChatMessageBubble(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 340.dp),
+            modifier = if (isUser) {
+                Modifier.widthIn(max = 340.dp)
+            } else {
+                Modifier.fillMaxWidth()
+            },
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
-            Surface(
-                color = bubbleColor,
-                contentColor = textColor,
-                shape = MaterialTheme.shapes.medium
-            ) {
+            if (isUser) {
+                Surface(
+                    color = bubbleColor,
+                    contentColor = textColor,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = if (message.text.isBlank()) "..." else message.text,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp)
+                    )
+                }
+            } else {
                 Text(
                     text = if (message.text.isBlank()) "..." else message.text,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = chatTextSizeSp.sp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = chatTextSizeSp.sp,
+                        lineHeight = (chatTextSizeSp * 1.45f).sp
+                    ),
+                    color = textColor
                 )
             }
 
