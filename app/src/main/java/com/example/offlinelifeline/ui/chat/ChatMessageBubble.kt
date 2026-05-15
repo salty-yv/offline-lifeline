@@ -2,8 +2,8 @@ package com.example.offlinelifeline.ui.chat
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.example.offlinelifeline.agent.rag.GuideCitation
 import com.example.offlinelifeline.core.model.Attachment
 import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
@@ -91,14 +90,6 @@ fun ChatMessageBubble(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
-
-            // 本地指南引用来源（仅 AI 回答且有 RAG 命中时显示）
-            if (!isUser && message.citations.isNotEmpty()) {
-                GuideCitationList(
-                    citations = message.citations,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
         }
     }
 }
@@ -150,37 +141,6 @@ private fun ToolRecommendationList(
             AssistChip(
                 onClick = { onToolSelected(recommendation.toolType) },
                 label = { Text(strings.toolName(recommendation.toolType)) }
-            )
-        }
-    }
-}
-
-/**
- * 本地指南引用来源列表。
- *
- * 在 AI 回答气泡下方展示“依据本地指南”标注，
- * 让用户知道答案来自软件内置内容而非模型自由发挥。
- */
-@Composable
-private fun GuideCitationList(
-    citations: List<GuideCitation>,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = "依据本地指南：",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
-        // 按指南 ID 去重，同一篇指南多个 chunk 只显示一次 title
-        citations.distinctBy { it.guideId }.forEach { citation ->
-            Text(
-                text = "- ${citation.title}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
             )
         }
     }

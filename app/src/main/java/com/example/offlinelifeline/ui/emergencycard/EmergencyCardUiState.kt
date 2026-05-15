@@ -10,6 +10,6 @@ data class EmergencyCardUiState(
     val notes: String = "",
     val hideSensitiveFields: Boolean = true,
     val isLoading: Boolean = true,
-    val isRescueView: Boolean = false,
+    val isRescueView: Boolean = true,
     val message: String? = null
 )

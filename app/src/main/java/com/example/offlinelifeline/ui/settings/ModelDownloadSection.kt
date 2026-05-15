@@ -29,11 +29,84 @@ import com.example.offlinelifeline.inference.ModelManifest
 import com.example.offlinelifeline.inference.download.ModelDownloadState
 import java.util.Locale
 
+data class ModelManagementStrings(
+    val title: String,
+    val recommendation: String,
+    val rescanLocalModels: String,
+    val availableContentDescription: String,
+    val download: String,
+    val retryDownload: String,
+    val failurePrefix: String,
+    val queued: String,
+    val paused: String,
+    val resume: String,
+    val cancel: String,
+    val localModelDetected: String,
+    val switchToModel: String,
+    val currentlyUsing: String,
+    val approx2Gb: String,
+    val approx4Gb: String,
+    val approxPrefix: String,
+    val connecting: String,
+    val downloadedSuffix: String
+) {
+    companion object {
+        fun forLanguage(languageTag: String): ModelManagementStrings {
+            return if (languageTag.startsWith("en")) en() else zh()
+        }
+
+        private fun zh() = ModelManagementStrings(
+            title = "离线模型管理",
+            recommendation = "建议在 Wi-Fi 环境下下载大模型",
+            rescanLocalModels = "重新检测本地模型",
+            availableContentDescription = "模型已可用",
+            download = "下载",
+            retryDownload = "重新下载",
+            failurePrefix = "失败：",
+            queued = "等待下载...",
+            paused = "已暂停，点击继续下载",
+            resume = "继续",
+            cancel = "取消",
+            localModelDetected = "已检测到本地模型：",
+            switchToModel = "切换到此模型",
+            currentlyUsing = "当前正在使用",
+            approx2Gb = "约 2 GB",
+            approx4Gb = "约 4 GB",
+            approxPrefix = "约 ",
+            connecting = "正在连接...",
+            downloadedSuffix = " 已下载"
+        )
+
+        private fun en() = ModelManagementStrings(
+            title = "Offline model management",
+            recommendation = "Use Wi-Fi for large model downloads",
+            rescanLocalModels = "Rescan local models",
+            availableContentDescription = "Model available",
+            download = "Download",
+            retryDownload = "Retry download",
+            failurePrefix = "Failed: ",
+            queued = "Waiting to download...",
+            paused = "Paused. Tap continue to resume.",
+            resume = "Continue",
+            cancel = "Cancel",
+            localModelDetected = "Local model found: ",
+            switchToModel = "Switch to this model",
+            currentlyUsing = "Currently in use",
+            approx2Gb = "About 2 GB",
+            approx4Gb = "About 4 GB",
+            approxPrefix = "About ",
+            connecting = "Connecting...",
+            downloadedSuffix = " downloaded"
+        )
+    }
+}
+
 @Composable
 fun ModelRowWithState(
     manifest: ModelManifest,
     downloadState: ModelDownloadState,
     modelAvailability: ModelAssetCheckResult?,
+    strings: ModelManagementStrings,
     isActive: Boolean,
     onDownload: (ModelManifest) -> Unit,
     onCancel: (ModelManifest) -> Unit,
@@ -61,7 +134,7 @@ fun ModelRowWithState(
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
                 )
                 Text(
-                    text = modelSizeLabel(manifest),
+                    text = modelSizeLabel(manifest, strings),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -70,7 +143,7 @@ fun ModelRowWithState(
             if (isLocalAvailable) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "模型已可用",
+                    contentDescription = strings.availableContentDescription,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -91,10 +164,11 @@ fun ModelRowWithState(
                         manifest = manifest,
                         isActive = isActive,
                         locationDescription = modelAvailability?.location?.description,
+                        strings = strings,
                         onSwitch = onSwitch
                     )
                 } else {
-                    val label = if (downloadState is ModelDownloadState.Failed) "重新下载" else "下载"
+                    val label = if (downloadState is ModelDownloadState.Failed) strings.retryDownload else strings.download
                     Button(
                         onClick = { onDownload(manifest) },
                         modifier = Modifier.fillMaxWidth()
@@ -103,7 +177,7 @@ fun ModelRowWithState(
                     }
                     if (downloadState is ModelDownloadState.Failed) {
                         Text(
-                            text = "失败：${downloadState.reason}",
+                            text = "${strings.failurePrefix}${downloadState.reason}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -113,18 +187,18 @@ fun ModelRowWithState(
 
             is ModelDownloadState.Queued -> {
                 Text(
-                    text = "等待下载...",
+                    text = strings.queued,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                CancelButton(onClick = { onCancel(manifest) })
+                CancelButton(strings = strings, onClick = { onCancel(manifest) })
             }
 
             is ModelDownloadState.Downloading -> {
                 val progress = downloadState.progressFraction
                 Text(
-                    text = downloadProgressText(downloadState),
+                    text = downloadProgressText(downloadState, strings),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -136,12 +210,12 @@ fun ModelRowWithState(
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-                CancelButton(onClick = { onCancel(manifest) })
+                CancelButton(strings = strings, onClick = { onCancel(manifest) })
             }
 
             is ModelDownloadState.Paused -> {
                 Text(
-                    text = "已暂停，点击继续下载",
+                    text = strings.paused,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -152,14 +226,14 @@ fun ModelRowWithState(
                     Button(
                         onClick = { onDownload(manifest) },
                         modifier = Modifier.weight(1f)
-                    ) { Text("继续") }
+                    ) { Text(strings.resume) }
                     OutlinedButton(
                         onClick = { onCancel(manifest) },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
-                    ) { Text("取消") }
+                    ) { Text(strings.cancel) }
                 }
             }
 
@@ -168,6 +242,7 @@ fun ModelRowWithState(
                     manifest = manifest,
                     isActive = isActive,
                     locationDescription = modelAvailability?.location?.description,
+                    strings = strings,
                     onSwitch = onSwitch
                 )
             }
@@ -182,11 +257,12 @@ private fun LocalModelSwitchContent(
     manifest: ModelManifest,
     isActive: Boolean,
     locationDescription: String?,
+    strings: ModelManagementStrings,
     onSwitch: (String) -> Unit
 ) {
     if (!locationDescription.isNullOrBlank()) {
         Text(
-            text = "已检测到本地模型：${shortLocation(locationDescription)}",
+            text = "${strings.localModelDetected}${shortLocation(locationDescription)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -196,10 +272,10 @@ private fun LocalModelSwitchContent(
         Button(
             onClick = { onSwitch(manifest.modelId) },
             modifier = Modifier.fillMaxWidth()
-        ) { Text("切换到此模型") }
+        ) { Text(strings.switchToModel) }
     } else {
         Text(
-            text = "当前正在使用",
+            text = strings.currentlyUsing,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold
@@ -208,7 +284,10 @@ private fun LocalModelSwitchContent(
 }
 
 @Composable
-private fun CancelButton(onClick: () -> Unit) {
+private fun CancelButton(
+    strings: ModelManagementStrings,
+    onClick: () -> Unit
+) {
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -216,22 +295,28 @@ private fun CancelButton(onClick: () -> Unit) {
             contentColor = MaterialTheme.colorScheme.error
         )
     ) {
-        Text("取消")
+        Text(strings.cancel)
     }
 }
 
-private fun modelSizeLabel(manifest: ModelManifest): String {
+private fun modelSizeLabel(
+    manifest: ModelManifest,
+    strings: ModelManagementStrings
+): String {
     return when {
-        manifest.expectedSizeBytes > 0 -> "约 ${formatGb(manifest.expectedSizeBytes)} GB"
-        manifest.modelId == "e2b" -> "约 2 GB"
-        else -> "约 4 GB"
+        manifest.expectedSizeBytes > 0 -> "${strings.approxPrefix}${formatGb(manifest.expectedSizeBytes)} GB"
+        manifest.modelId == "e2b" -> strings.approx2Gb
+        else -> strings.approx4Gb
     }
 }
 
-private fun downloadProgressText(state: ModelDownloadState.Downloading): String {
+private fun downloadProgressText(
+    state: ModelDownloadState.Downloading,
+    strings: ModelManagementStrings
+): String {
     val progress = state.progressFraction
     if (progress < 0f) {
-        return "正在连接..."
+        return strings.connecting
     }
 
     val downloaded = formatGb(state.downloadedBytes)
@@ -241,7 +326,7 @@ private fun downloadProgressText(state: ModelDownloadState.Downloading): String 
     return if (total != null) {
         "$percent%  $downloaded GB / $total GB"
     } else {
-        "$downloaded GB 已下载"
+        "$downloaded GB${strings.downloadedSuffix}"
     }
 }
 

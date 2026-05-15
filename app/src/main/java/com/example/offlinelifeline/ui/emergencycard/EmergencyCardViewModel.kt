@@ -68,7 +68,12 @@ class EmergencyCardViewModel(
                     updatedAtMillis = timeProvider.nowMillis()
                 )
             )
-            _uiState.update { it.copy(message = "信息卡已保存在本机") }
+            _uiState.update {
+                it.copy(
+                    message = "信息卡已保存在本机",
+                    isRescueView = true
+                )
+            }
         }
     }
 

@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,9 @@ fun SettingsScreen(
 ) {
     val strings = LocalAppStrings.current
     val settings by viewModel.settings.collectAsState()
+    val modelStrings = remember(strings.languageTag) {
+        ModelManagementStrings.forLanguage(strings.languageTag)
+    }
 
     LazyColumn(
         modifier = modifier
@@ -101,12 +105,12 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "🤖 离线模型管理",
+                        text = modelStrings.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "💡 建议在 Wi-Fi 环境下下载大模型",
+                        text = modelStrings.recommendation,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -114,7 +118,7 @@ fun SettingsScreen(
                         onClick = viewModel::refreshAllModelAvailability,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("重新检测本地模型")
+                        Text(modelStrings.rescanLocalModels)
                     }
                     HorizontalDivider()
 
@@ -130,6 +134,7 @@ fun SettingsScreen(
                             manifest = manifest,
                             downloadState = downloadState,
                             modelAvailability = modelAvailability,
+                            strings = modelStrings,
                             isActive = settings.activeModelId == manifest.modelId,
                             onDownload = viewModel::enqueueDownload,
                             onCancel = viewModel::cancelDownload,
