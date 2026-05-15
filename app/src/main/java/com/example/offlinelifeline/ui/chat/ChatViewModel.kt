@@ -152,7 +152,8 @@ class ChatViewModel(
                 languageTag = languageTag
             )
             val assistantMessageWithTools = assistantMessage.copy(
-                toolRecommendations = preparedResponse.response.toolRecommendations
+                toolRecommendations = preparedResponse.response.toolRecommendations,
+                citations = preparedResponse.response.citations
             )
             updateAssistantMessage(assistantMessageWithTools)
 

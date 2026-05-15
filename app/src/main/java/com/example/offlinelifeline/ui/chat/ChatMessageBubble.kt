@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.agent.rag.GuideCitation
 import com.example.offlinelifeline.core.model.Attachment
 import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
@@ -90,6 +91,14 @@ fun ChatMessageBubble(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+
+            // 本地指南引用来源（仅 AI 回答且有 RAG 命中时显示）
+            if (!isUser && message.citations.isNotEmpty()) {
+                GuideCitationList(
+                    citations = message.citations,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
     }
 }
@@ -141,6 +150,38 @@ private fun ToolRecommendationList(
             AssistChip(
                 onClick = { onToolSelected(recommendation.toolType) },
                 label = { Text(strings.toolName(recommendation.toolType)) }
+            )
+        }
+    }
+}
+
+/**
+ * 本地指南引用来源列表。
+ *
+ * 在 AI 回答气泡下方展示“依据本地指南”标注，
+ * 让用户知道答案来自软件内置内容而非模型自由发挥。
+ */
+@Composable
+private fun GuideCitationList(
+    citations: List<GuideCitation>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = "依据本地指南：",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+        )
+        citations.distinctBy { it.chunkId }.forEach { citation ->
+            // headingPath 格式如 "出血 > 先做这 3 步"，只显示最后一段（小标题）
+            val label = citation.headingPath
+            Text(
+                text = "- $label",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }
