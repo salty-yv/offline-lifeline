@@ -175,11 +175,10 @@ private fun GuideCitationList(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline
         )
-        citations.distinctBy { it.chunkId }.forEach { citation ->
-            // headingPath 格式如 "出血 > 先做这 3 步"，只显示最后一段（小标题）
-            val label = citation.headingPath
+        // 按指南 ID 去重，同一篇指南多个 chunk 只显示一次 title
+        citations.distinctBy { it.guideId }.forEach { citation ->
             Text(
-                text = "- $label",
+                text = "- ${citation.title}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )
