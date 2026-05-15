@@ -9,7 +9,8 @@ class PromptBuilder {
      * 构建发送给 LLM 的 System Instruction。
      *
      * 根据 [intent] 决定注入不同的输出格式要求：
-     * - [UserIntent.EMERGENCY] / [UserIntent.UNKNOWN]：注入6段应急结构框架，要求追问处境
+     * - [UserIntent.EMERGENCY] / [UserIntent.UNKNOWN]：注入6段应急参考框架，格式为建议而非强制
+     * - [UserIntent.FOLLOW_UP]：不注入任何格式要求，LLM 自然延续上下文作答
      * - [UserIntent.PROCEDURAL]：注入步骤列表格式，不追问电量/体力等应急信息
      */
     fun buildSystemInstruction(
@@ -94,23 +95,42 @@ class PromptBuilder {
                     }
                     appendLine()
 
-                    appendLine("[Required Output Format]")
+                    appendLine("[Output Format Reference]")
                     if (useEnglish) {
-                        appendLine("Answer strictly using this structure:")
-                        appendLine("1. Do these 3 things first")
-                        appendLine("2. Current risks")
-                        appendLine("3. Next few minutes")
-                        appendLine("4. Do not")
-                        appendLine("5. I still need to confirm")
-                        appendLine("6. Available local tools")
+                        appendLine("This is a reference framework, not a rigid template. Adapt based on what the user actually asked.")
+                        appendLine("If the situation is simple or the user asked a direct question, answer directly in 2-3 sentences.")
+                        appendLine("If the situation is complex and unclear, you may use this structure as a guide:")
+                        appendLine("- Immediate actions (most critical first)")
+                        appendLine("- Current risks (only if not already obvious)")
+                        appendLine("- Next steps")
+                        appendLine("- What NOT to do (only if there's a real danger of wrong action)")
+                        appendLine("- Questions to ask (only the 1-2 most critical unknowns)")
+                        appendLine("Never force all sections if they are not needed.")
                     } else {
-                        appendLine("请严格按以下结构回答：")
-                        appendLine("1. 先做这 3 步")
-                        appendLine("2. 当前风险")
-                        appendLine("3. 接下来几分钟")
-                        appendLine("4. 不要做")
-                        appendLine("5. 我还需要确认")
-                        appendLine("6. 可使用的本地工具")
+                        appendLine("以下是参考框架，不是必须套用的模板。根据用户实际提问灵活调整。")
+                        appendLine("如果情况简单或用户问的是具体问题，直接用 2-3 句话回答即可。")
+                        appendLine("如果处境复杂且信息不足，可参考以下结构组织回答：")
+                        appendLine("- 立即行动（最重要的放第一）")
+                        appendLine("- 当前风险（仅当用户未提及时才列出）")
+                        appendLine("- 接下来要做的")
+                        appendLine("- 不要做的（仅当存在明显错误操作风险时才列出）")
+                        appendLine("- 需要确认的问题（最多问 1-2 个最关键的）")
+                        appendLine("不需要的部分直接省略，不要强行凑满所有段落。")
+                    }
+                }
+
+                UserIntent.FOLLOW_UP -> {
+                    // 追问场景：完全不注入格式约束，让 LLM 基于上下文自然作答
+                    if (useEnglish) {
+                        appendLine("The user is continuing the conversation based on previous context.")
+                        appendLine("Answer naturally and directly. Do NOT restart the emergency framework.")
+                        appendLine("Refer back to what was already discussed and build on it.")
+                        appendLine("If the user's question is simple, answer in 1-2 sentences.")
+                    } else {
+                        appendLine("用户正在基于之前对话的上下文继续提问或补充信息。")
+                        appendLine("请自然地延续对话，直接回答用户当前的问题，不要重新套应急框架。")
+                        appendLine("可以引用之前已知的情况（如位置、伤情、装备），体现对话的连贯性。")
+                        appendLine("如果问题简单，1-2 句话直接回答即可。")
                     }
                 }
 

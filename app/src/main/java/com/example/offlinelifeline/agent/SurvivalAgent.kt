@@ -49,7 +49,9 @@ class SurvivalAgent(
         val baseContext = contextManager.buildContext(contextMessages)
         val risks = riskClassifier.classify(userInput, baseContext)
         val context = baseContext.copy(riskDomains = risks)
-        val intent = intentClassifier.classify(userInput)
+        // 历史中 USER 消息的数量即为已完成的对话轮次，用于区分首轮和追问
+        val previousTurns = history.count { it.role == ChatRole.USER }
+        val intent = intentClassifier.classify(userInput, previousTurns)
         val questions = questionPlanner.planQuestions(context)
         val tools = toolRouter.recommendTools(risks, context, languageTag)
         val actionStructure = actionPlanner.buildActionStructure(risks, context, questions, languageTag)
