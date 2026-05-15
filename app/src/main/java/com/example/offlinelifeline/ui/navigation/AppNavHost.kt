@@ -2,9 +2,9 @@ package com.example.offlinelifeline.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.example.offlinelifeline.core.model.ToolType
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.offlinelifeline.data.datastore.AppSettings
 import com.example.offlinelifeline.di.AppContainer
 import com.example.offlinelifeline.ui.chat.ChatScreen
 import com.example.offlinelifeline.ui.chat.ChatViewModel
@@ -13,6 +13,7 @@ import com.example.offlinelifeline.ui.emergencycard.EmergencyCardViewModel
 import com.example.offlinelifeline.ui.guide.GuideScreen
 import com.example.offlinelifeline.ui.guide.GuideViewModel
 import com.example.offlinelifeline.ui.settings.SettingsScreen
+import com.example.offlinelifeline.ui.settings.SettingsViewModel
 import com.example.offlinelifeline.ui.toolbox.ToolboxScreen
 import com.example.offlinelifeline.ui.toolbox.ToolboxViewModel
 
@@ -21,11 +22,11 @@ fun AppNavHost(
     selectedRoute: Route,
     selectedTool: ToolType?,
     onToolSelected: (ToolType) -> Unit,
-    settings: AppSettings,
-    onLanguageSelected: (String) -> Unit,
     appContainer: AppContainer,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     when (selectedRoute) {
         Route.Chat -> {
             val chatViewModel: ChatViewModel = viewModel(
@@ -94,10 +95,18 @@ fun AppNavHost(
             )
         }
 
-        Route.Settings -> SettingsScreen(
-            settings = settings,
-            onLanguageSelected = onLanguageSelected,
-            modifier = modifier
-        )
+        Route.Settings -> {
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.Factory(
+                    settingsStore = appContainer.settingsStore,
+                    modelDownloadRepository = appContainer.modelDownloadRepository,
+                    context = context
+                )
+            )
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                modifier = modifier
+            )
+        }
     }
 }

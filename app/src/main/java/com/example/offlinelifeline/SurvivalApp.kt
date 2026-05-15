@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +26,6 @@ import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 import com.example.offlinelifeline.ui.i18n.appStringsFor
 import com.example.offlinelifeline.ui.navigation.AppNavHost
 import com.example.offlinelifeline.ui.navigation.Route
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +36,6 @@ fun SurvivalApp() {
     val appContainer = remember(context) { AppContainer(context) }
     val settings by appContainer.settingsStore.settings.collectAsState(initial = AppSettings())
     val strings = appStringsFor(settings.languageTag)
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         appContainer.deviceDiagnosticsLogger.logSnapshot("app_start")
@@ -70,12 +67,6 @@ fun SurvivalApp() {
                 onToolSelected = { toolType ->
                     selectedTool = toolType
                     selectedRoute = toolType.toRoute()
-                },
-                settings = settings,
-                onLanguageSelected = { languageTag ->
-                    scope.launch {
-                        appContainer.settingsStore.setLanguageTag(languageTag)
-                    }
                 },
                 appContainer = appContainer,
                 modifier = Modifier

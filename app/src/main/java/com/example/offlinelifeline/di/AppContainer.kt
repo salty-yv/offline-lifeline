@@ -29,6 +29,7 @@ import com.example.offlinelifeline.inference.LocalLlmEngine
 import com.example.offlinelifeline.inference.ModelAssetManager
 import com.example.offlinelifeline.inference.ModelIntegrityChecker
 import com.example.offlinelifeline.inference.MockLlmEngine
+import com.example.offlinelifeline.inference.download.ModelDownloadRepository
 import com.example.offlinelifeline.device.battery.BatteryAdviceGenerator
 import com.example.offlinelifeline.device.battery.BatteryStatusProvider
 import com.example.offlinelifeline.device.flashlight.FlashlightController
@@ -118,6 +119,14 @@ class AppContainer(context: Context) {
 
     val modelIntegrityChecker: ModelIntegrityChecker by lazy {
         ModelIntegrityChecker()
+    }
+
+    /** 模型下载管理器（新增）：负责断点续传下载与 SHA-256 校验 */
+    val modelDownloadRepository: ModelDownloadRepository by lazy {
+        ModelDownloadRepository(
+            context = appContext,
+            integrityChecker = modelIntegrityChecker
+        )
     }
 
     val modelAssetManager: ModelAssetManager by lazy {
