@@ -152,7 +152,8 @@ class AppContainer(context: Context) {
             toolRouter = ToolRouter(),
             promptBuilder = PromptBuilder(),
             safetyKernel = SafetyKernel(),
-            llmEngine = localLlmEngine
+            llmEngine = localLlmEngine,
+            guideRetrievalService = guideRetrievalService
         )
     }
 

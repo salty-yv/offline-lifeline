@@ -19,7 +19,8 @@ class PromptBuilder {
         intent: UserIntent = UserIntent.UNKNOWN,
         imagePaths: List<String> = emptyList(),
         imageInputSupported: Boolean = false,
-        languageTag: String = "zh-CN"
+        languageTag: String = "zh-CN",
+        ragContext: String = ""          // 本地指南 chunk 拼接文本，空字符串表示无命中
     ): String {
         val useEnglish = languageTag.startsWith("en")
         return buildString {
@@ -43,6 +44,22 @@ class PromptBuilder {
                 }
             }
             appendLine()
+
+            // ── 本地指南 RAG 上下文 ──────────────────────────────────────────────
+            // 仅在有命中内容时注入，避免浪费 context 窗口
+            if (ragContext.isNotBlank()) {
+                appendLine("[Local Guide Context]")
+                appendLine("以下是软件内置的本地指南片段，直接来自离线知识库：")
+                appendLine(ragContext)
+                appendLine()
+                appendLine(if (useEnglish) {
+                    "Priority: Base your answer on the Local Guide Context above. " +
+                    "If it does not cover the situation, do not invent specific medical steps."
+                } else {
+                    "优先依据以上本地指南回答。如果本地指南没有覆盖，不要编造具体医疗操作。"
+                })
+                appendLine()
+            }
 
             if (imagePaths.isNotEmpty()) {
                 appendLine("[Image Input]")

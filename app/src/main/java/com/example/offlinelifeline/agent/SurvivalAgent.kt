@@ -1,5 +1,7 @@
 package com.example.offlinelifeline.agent
 
+import com.example.offlinelifeline.agent.rag.GuideCitation
+import com.example.offlinelifeline.agent.rag.GuideRetrievalService
 import com.example.offlinelifeline.core.model.AgentResponse
 import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
@@ -22,9 +24,16 @@ class SurvivalAgent(
     private val toolRouter: ToolRouter,
     private val promptBuilder: PromptBuilder,
     private val safetyKernel: SafetyKernel,
-    private val llmEngine: LocalLlmEngine
+    private val llmEngine: LocalLlmEngine,
+    /** RAG 服务，可空：为 null 时跳过检索，保持向后兼容 */
+    private val guideRetrievalService: GuideRetrievalService? = null
 ) {
-    fun prepareResponse(
+    /**
+     * 准备 Agent 响应（协程，内含 RAG 检索 IO 操作）。
+     *
+     * RAG 检索在这里完成，结果注入 systemInstruction 后交给 [sendMessage] 送给 LLM。
+     */
+    suspend fun prepareResponse(
         userInput: String,
         history: List<ChatMessage>,
         imagePaths: List<String> = emptyList(),
@@ -44,6 +53,20 @@ class SurvivalAgent(
         val questions = questionPlanner.planQuestions(context)
         val tools = toolRouter.recommendTools(risks, context, languageTag)
         val actionStructure = actionPlanner.buildActionStructure(risks, context, questions, languageTag)
+
+        // ── RAG 检索：在调用 LLM 前先拿本地 chunk ──────────────────────────────
+        val ragChunks = guideRetrievalService
+            ?.retrieve(userInput, risks, limit = RAG_CHUNK_LIMIT)
+            .orEmpty()
+
+        val ragContext = if (ragChunks.isNotEmpty()) {
+            GuideRetrievalService.buildLocalGuideContext(ragChunks)
+        } else ""
+
+        val citations: List<GuideCitation> = if (ragChunks.isNotEmpty()) {
+            GuideRetrievalService.buildCitations(ragChunks)
+        } else emptyList()
+
         val systemInstruction = promptBuilder.buildSystemInstruction(
             context = context,
             actionStructure = actionStructure,
@@ -51,7 +74,8 @@ class SurvivalAgent(
             intent = intent,
             imagePaths = imagePaths,
             imageInputSupported = llmEngine.supportsImageInput,
-            languageTag = languageTag
+            languageTag = languageTag,
+            ragContext = ragContext           // ← 注入本地指南上下文
         )
         val safetyInstruction = promptBuilder.buildSafetyInstruction(
             safetyKernel.buildSafetyInstruction(
@@ -72,7 +96,8 @@ class SurvivalAgent(
                 text = actionStructure,
                 riskDomains = risks,
                 followUpQuestions = questions,
-                toolRecommendations = tools
+                toolRecommendations = tools,
+                citations = citations          // ← 引用来源传回 UI
             )
         )
     }
@@ -111,6 +136,8 @@ class SurvivalAgent(
 
     private companion object {
         const val SAFE_CHUNK_SIZE = 14
+        /** 每次最多注入 5 个 chunk，避免 context 窗口过大 */
+        const val RAG_CHUNK_LIMIT = 5
     }
 }
 
