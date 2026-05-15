@@ -217,13 +217,22 @@ class AppContainer(context: Context) {
                     """.trimIndent()
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS idx_chunk_guide  ON guide_chunks(guideId)"
+                    "DROP INDEX IF EXISTS idx_chunk_guide"
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS idx_chunk_topic  ON guide_chunks(topic)"
+                    "DROP INDEX IF EXISTS idx_chunk_topic"
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS idx_chunk_domain ON guide_chunks(riskDomain)"
+                    "DROP INDEX IF EXISTS idx_chunk_domain"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_guide_chunks_guideId ON guide_chunks(guideId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_guide_chunks_topic ON guide_chunks(topic)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_guide_chunks_riskDomain ON guide_chunks(riskDomain)"
                 )
                 db.execSQL(
                     """
