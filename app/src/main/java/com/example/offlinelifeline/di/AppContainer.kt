@@ -42,7 +42,10 @@ class AppContainer(context: Context) {
             AppDatabase::class.java,
             DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2)
+            // 首次安装时从 assets/databases/offline_guides.db 加载内置数据。
+            // 已有旧版数据库时自动走 Migration，不会覆盖用户已有记录。
+            .createFromAsset("databases/offline_guides.db")
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 
@@ -92,6 +95,10 @@ class AppContainer(context: Context) {
 
     val guideRepository: GuideRepository by lazy {
         GuideRepository(database.guideDao())
+    }
+
+    val guideChunkDao by lazy {
+        database.guideChunkDao()
     }
 
     val settingsStore: SettingsStore by lazy {
@@ -179,6 +186,57 @@ class AppContainer(context: Context) {
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_chat_messages_conversationId ON chat_messages(conversationId)"
+                )
+            }
+        }
+
+        /**
+         * v2 → v3：新增 guide_chunks 普通表和 guide_chunks_fts FTS4 虚拟表。
+         * 用于 Agent 本地 RAG 检索；表数据由 assets/databases/offline_guides.db 内置提供。
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS guide_chunks (
+                        chunkId         TEXT NOT NULL PRIMARY KEY,
+                        guideId         TEXT NOT NULL,
+                        topic           TEXT NOT NULL,
+                        riskDomain      TEXT NOT NULL,
+                        title           TEXT NOT NULL,
+                        headingPath     TEXT NOT NULL,
+                        body            TEXT NOT NULL,
+                        tags            TEXT NOT NULL,
+                        priority        INTEGER NOT NULL,
+                        chunkIndex      INTEGER NOT NULL,
+                        contentVersion  INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS idx_chunk_guide  ON guide_chunks(guideId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS idx_chunk_topic  ON guide_chunks(topic)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS idx_chunk_domain ON guide_chunks(riskDomain)"
+                )
+                db.execSQL(
+                    """
+                    CREATE VIRTUAL TABLE IF NOT EXISTS guide_chunks_fts
+                    USING fts4(
+                        chunkId,
+                        guideId,
+                        topic,
+                        riskDomain,
+                        title,
+                        headingPath,
+                        body,
+                        tags
+                    )
+                    """.trimIndent()
                 )
             }
         }
