@@ -26,8 +26,10 @@ import com.example.offlinelifeline.data.repository.GuideRepository
 import com.example.offlinelifeline.inference.FallbackLlmEngine
 import com.example.offlinelifeline.inference.LiteRtLmEngine
 import com.example.offlinelifeline.inference.LocalLlmEngine
+import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.inference.ModelAssetManager
 import com.example.offlinelifeline.inference.ModelIntegrityChecker
+import com.example.offlinelifeline.inference.ModelManifest
 import com.example.offlinelifeline.inference.MockLlmEngine
 import com.example.offlinelifeline.inference.download.ModelDownloadRepository
 import com.example.offlinelifeline.device.battery.BatteryAdviceGenerator
@@ -35,6 +37,7 @@ import com.example.offlinelifeline.device.battery.BatteryStatusProvider
 import com.example.offlinelifeline.device.flashlight.FlashlightController
 import com.example.offlinelifeline.device.image.ImagePreprocessor
 import com.example.offlinelifeline.safety.SafetyKernel
+import kotlinx.coroutines.flow.first
 
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
@@ -140,7 +143,11 @@ class AppContainer(context: Context) {
     private val liteRtLmEngine: LocalLlmEngine by lazy {
         LiteRtLmEngine(
             modelAssetManager = modelAssetManager,
-            debugLogger = debugLogger
+            debugLogger = debugLogger,
+            manifestProvider = {
+                val activeModelId = settingsStore.settings.first().activeModelId
+                ModelCatalog.findById(activeModelId) ?: ModelManifest.Default
+            }
         )
     }
 

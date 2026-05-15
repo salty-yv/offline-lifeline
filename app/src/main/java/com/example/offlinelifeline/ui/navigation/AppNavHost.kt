@@ -100,6 +100,7 @@ fun AppNavHost(
                 factory = SettingsViewModel.Factory(
                     settingsStore = appContainer.settingsStore,
                     modelDownloadRepository = appContainer.modelDownloadRepository,
+                    modelAssetManager = appContainer.modelAssetManager,
                     context = context
                 )
             )

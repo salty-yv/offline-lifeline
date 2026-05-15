@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.core.model.ModelRuntimeState
+import com.example.offlinelifeline.inference.ModelAssetCheckResult
 import com.example.offlinelifeline.inference.ModelManifest
 import com.example.offlinelifeline.inference.download.ModelDownloadState
 import java.util.Locale
@@ -31,12 +33,16 @@ import java.util.Locale
 fun ModelRowWithState(
     manifest: ModelManifest,
     downloadState: ModelDownloadState,
+    modelAvailability: ModelAssetCheckResult?,
     isActive: Boolean,
     onDownload: (ModelManifest) -> Unit,
     onCancel: (ModelManifest) -> Unit,
     onSwitch: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isLocalAvailable = downloadState is ModelDownloadState.Completed ||
+        modelAvailability?.runtimeState == ModelRuntimeState.ReadyToLoad
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -61,10 +67,10 @@ fun ModelRowWithState(
                 )
             }
 
-            if (downloadState is ModelDownloadState.Completed) {
+            if (isLocalAvailable) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "已下载",
+                    contentDescription = "模型已可用",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -80,25 +86,34 @@ fun ModelRowWithState(
 
         when (downloadState) {
             is ModelDownloadState.Idle, is ModelDownloadState.Failed -> {
-                val label = if (downloadState is ModelDownloadState.Failed) "重新下载" else "下载"
-                Button(
-                    onClick = { onDownload(manifest) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(label)
-                }
-                if (downloadState is ModelDownloadState.Failed) {
-                    Text(
-                        text = "失败：${downloadState.reason}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                if (isLocalAvailable) {
+                    LocalModelSwitchContent(
+                        manifest = manifest,
+                        isActive = isActive,
+                        locationDescription = modelAvailability?.location?.description,
+                        onSwitch = onSwitch
                     )
+                } else {
+                    val label = if (downloadState is ModelDownloadState.Failed) "重新下载" else "下载"
+                    Button(
+                        onClick = { onDownload(manifest) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(label)
+                    }
+                    if (downloadState is ModelDownloadState.Failed) {
+                        Text(
+                            text = "失败：${downloadState.reason}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
             is ModelDownloadState.Queued -> {
                 Text(
-                    text = "等待下载…",
+                    text = "等待下载...",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -149,23 +164,46 @@ fun ModelRowWithState(
             }
 
             is ModelDownloadState.Completed -> {
-                if (!isActive) {
-                    Button(
-                        onClick = { onSwitch(manifest.modelId) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("切换到此模型") }
-                } else {
-                    Text(
-                        text = "当前正在使用",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                LocalModelSwitchContent(
+                    manifest = manifest,
+                    isActive = isActive,
+                    locationDescription = modelAvailability?.location?.description,
+                    onSwitch = onSwitch
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
+    }
+}
+
+@Composable
+private fun LocalModelSwitchContent(
+    manifest: ModelManifest,
+    isActive: Boolean,
+    locationDescription: String?,
+    onSwitch: (String) -> Unit
+) {
+    if (!locationDescription.isNullOrBlank()) {
+        Text(
+            text = "已检测到本地模型：${shortLocation(locationDescription)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    if (!isActive) {
+        Button(
+            onClick = { onSwitch(manifest.modelId) },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("切换到此模型") }
+    } else {
+        Text(
+            text = "当前正在使用",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -193,7 +231,7 @@ private fun modelSizeLabel(manifest: ModelManifest): String {
 private fun downloadProgressText(state: ModelDownloadState.Downloading): String {
     val progress = state.progressFraction
     if (progress < 0f) {
-        return "正在连接…"
+        return "正在连接..."
     }
 
     val downloaded = formatGb(state.downloadedBytes)
@@ -204,6 +242,14 @@ private fun downloadProgressText(state: ModelDownloadState.Downloading): String 
         "$percent%  $downloaded GB / $total GB"
     } else {
         "$downloaded GB 已下载"
+    }
+}
+
+private fun shortLocation(description: String): String {
+    return if (description.length <= 48) {
+        description
+    } else {
+        "..." + description.takeLast(45)
     }
 }
 

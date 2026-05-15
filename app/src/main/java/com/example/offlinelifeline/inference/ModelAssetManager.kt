@@ -97,6 +97,44 @@ class ModelAssetManager(
         }
     }
 
+    suspend fun prepareModelForRuntime(
+        manifest: ModelManifest = ModelManifest.Default
+    ): ModelAssetCheckResult {
+        val checkResult = checkModel(manifest)
+        val location = checkResult.location
+        if (checkResult.runtimeState != ModelRuntimeState.ReadyToLoad || location !is ModelAssetLocation.AssetLocation) {
+            return checkResult
+        }
+
+        return withContext(dispatchers.io) {
+            val copiedFile = copyAssetModelToFile(location.assetName)
+            when (val integrityResult = integrityChecker.verifyFile(copiedFile, manifest)) {
+                ModelIntegrityResult.Valid -> checkResult.copy(
+                    location = ModelAssetLocation.FileLocation(copiedFile),
+                    message = "Asset model was copied to app storage and passed integrity checks."
+                )
+
+                ModelIntegrityResult.Missing -> checkResult.copy(
+                    location = null,
+                    runtimeState = ModelRuntimeState.Missing,
+                    message = "Model file is missing. Offline guides and tools are still available."
+                )
+
+                is ModelIntegrityResult.SizeMismatch -> checkResult.copy(
+                    location = ModelAssetLocation.FileLocation(copiedFile),
+                    runtimeState = ModelRuntimeState.ChecksumFailed,
+                    message = "Model file size does not match the manifest."
+                )
+
+                is ModelIntegrityResult.ChecksumMismatch -> checkResult.copy(
+                    location = ModelAssetLocation.FileLocation(copiedFile),
+                    runtimeState = ModelRuntimeState.ChecksumFailed,
+                    message = "Model SHA-256 does not match the manifest."
+                )
+            }
+        }
+    }
+
     private suspend fun findModelLocation(manifest: ModelManifest): ModelAssetLocation? {
         return withContext(dispatchers.io) {
             val fileNames = listOf(manifest.fileName) + manifest.alternateFileNames
@@ -118,6 +156,26 @@ class ModelAssetManager(
                 if (assetExists) ModelAssetLocation.AssetLocation(fileName) else null
             }
         }
+    }
+
+    private fun copyAssetModelToFile(assetName: String): File {
+        val modelDir = File(appContext.filesDir, "models").apply { mkdirs() }
+        val targetFile = modelDir.resolve(assetName)
+        if (targetFile.exists() && targetFile.length() > 0L) {
+            return targetFile
+        }
+
+        val tmpFile = modelDir.resolve("$assetName.asset.tmp")
+        appContext.assets.open(assetName).use { input ->
+            tmpFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        if (!tmpFile.renameTo(targetFile)) {
+            tmpFile.copyTo(targetFile, overwrite = true)
+            tmpFile.delete()
+        }
+        return targetFile
     }
 
     private companion object {

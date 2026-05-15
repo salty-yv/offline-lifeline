@@ -13,7 +13,9 @@ import com.example.offlinelifeline.core.model.ModelRuntimeState
 import com.example.offlinelifeline.data.datastore.SettingsStore
 import com.example.offlinelifeline.data.repository.ChatRepository
 import com.example.offlinelifeline.inference.LocalLlmEngine
+import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.inference.ModelAssetManager
+import com.example.offlinelifeline.inference.ModelManifest
 import com.example.offlinelifeline.device.image.ImagePreprocessor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
@@ -37,6 +39,8 @@ class ChatViewModel(
     val uiState: kotlinx.coroutines.flow.StateFlow<ChatUiState> = _uiState
 
     private var generationJob: Job? = null
+    private var modelRefreshJob: Job? = null
+    private var activeModelId: String? = null
     private var languageTag: String = "zh-CN"
 
     init {
@@ -48,16 +52,6 @@ class ChatViewModel(
                     messages = chatRepository.getMessages(activeConversation.id)
                 )
             }
-            _uiState.update { it.copy(modelAssetState = ModelRuntimeState.Checking) }
-            val modelCheck = modelAssetManager.checkModel()
-            _uiState.update { it.copy(modelAssetState = modelCheck.runtimeState) }
-
-            llmEngine.initialize()
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(errorMessage = throwable.message ?: "模型初始化失败")
-                    }
-                }
         }
 
         viewModelScope.launch {
@@ -75,6 +69,13 @@ class ChatViewModel(
         viewModelScope.launch {
             settingsStore.settings.collect { settings ->
                 languageTag = settings.languageTag
+                if (activeModelId != settings.activeModelId) {
+                    activeModelId = settings.activeModelId
+                    modelRefreshJob?.cancel()
+                    modelRefreshJob = launch {
+                        refreshSelectedModel(settings.activeModelId)
+                    }
+                }
             }
         }
     }
@@ -314,10 +315,25 @@ class ChatViewModel(
 
     override fun onCleared() {
         generationJob?.cancel()
+        modelRefreshJob?.cancel()
         viewModelScope.launch {
             llmEngine.release()
         }
         super.onCleared()
+    }
+
+    private suspend fun refreshSelectedModel(modelId: String) {
+        val manifest = ModelCatalog.findById(modelId) ?: ModelManifest.Default
+        _uiState.update { it.copy(modelAssetState = ModelRuntimeState.Checking, errorMessage = null) }
+        val modelCheck = modelAssetManager.checkModel(manifest)
+        _uiState.update { it.copy(modelAssetState = modelCheck.runtimeState) }
+
+        llmEngine.initialize()
+            .onFailure { throwable ->
+                _uiState.update {
+                    it.copy(errorMessage = throwable.message ?: "模型初始化失败")
+                }
+            }
     }
 
     private fun updateAssistantMessage(message: ChatMessage) {

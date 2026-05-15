@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -109,16 +110,26 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    OutlinedButton(
+                        onClick = viewModel::refreshAllModelAvailability,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("重新检测本地模型")
+                    }
                     HorizontalDivider()
 
                     ModelCatalog.all.forEachIndexed { index, manifest ->
                         val downloadState by viewModel
                             .getDownloadState(manifest.modelId)
                             .collectAsState()
+                        val modelAvailability by viewModel
+                            .getModelAvailability(manifest.modelId)
+                            .collectAsState()
 
                         ModelRowWithState(
                             manifest = manifest,
                             downloadState = downloadState,
+                            modelAvailability = modelAvailability,
                             isActive = settings.activeModelId == manifest.modelId,
                             onDownload = viewModel::enqueueDownload,
                             onCancel = viewModel::cancelDownload,

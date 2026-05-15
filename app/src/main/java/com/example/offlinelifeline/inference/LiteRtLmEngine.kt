@@ -22,6 +22,7 @@ import java.io.File
 class LiteRtLmEngine(
     private val modelAssetManager: ModelAssetManager,
     private val debugLogger: DebugLogger,
+    private val manifestProvider: suspend () -> ModelManifest = { ModelManifest.Default },
     private val dispatchers: AppDispatchers = AppDispatchers()
 ) : LocalLlmEngine {
     private val _runtimeState = MutableStateFlow<ModelRuntimeState>(ModelRuntimeState.NotChecked)
@@ -29,6 +30,7 @@ class LiteRtLmEngine(
 
     private var engine: Engine? = null
     private var conversation: Conversation? = null
+    private var loadedModelId: String? = null
     private var stopRequested = false
     private var imageInputEnabled = false
 
@@ -36,14 +38,18 @@ class LiteRtLmEngine(
         get() = imageInputEnabled
 
     override suspend fun initialize(): Result<Unit> {
-        if (_runtimeState.value == ModelRuntimeState.Ready) {
+        val manifest = manifestProvider()
+        if (_runtimeState.value == ModelRuntimeState.Ready && loadedModelId == manifest.modelId) {
             return Result.success(Unit)
+        }
+        if (engine != null && loadedModelId != manifest.modelId) {
+            release()
         }
 
         val startedAt = SystemClock.elapsedRealtime()
         return runCatching {
             _runtimeState.value = ModelRuntimeState.Checking
-            val checkResult = modelAssetManager.checkModel()
+            val checkResult = modelAssetManager.prepareModelForRuntime(manifest)
             if (checkResult.runtimeState != ModelRuntimeState.ReadyToLoad) {
                 _runtimeState.value = checkResult.runtimeState
                 error(checkResult.message)
@@ -74,10 +80,11 @@ class LiteRtLmEngine(
                 conversation = createdEngine.createConversation()
             }
 
+            loadedModelId = manifest.modelId
             _runtimeState.value = ModelRuntimeState.Ready
             debugLogger.info(
                 TAG,
-                "litertlm_initialize_success elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
+                "litertlm_initialize_success modelId=${manifest.modelId} elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
             )
         }.onFailure { throwable ->
             _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM initialization failed")
@@ -184,6 +191,7 @@ class LiteRtLmEngine(
                 conversation = null
                 engine?.close()
                 engine = null
+                loadedModelId = null
             }
         }.onFailure { throwable ->
             debugLogger.error(TAG, "litertlm_release_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}", throwable)

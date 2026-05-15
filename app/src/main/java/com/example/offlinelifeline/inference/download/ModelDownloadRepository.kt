@@ -140,6 +140,12 @@ class ModelDownloadRepository(
         return if (file.exists()) file else null
     }
 
+    suspend fun refreshDownloadedState(manifest: ModelManifest) {
+        val file = getDownloadedFile(manifest) ?: return
+        val stateFlow = getOrCreateStateFlow(manifest.modelId)
+        verifyAndEmit(stateFlow, file, manifest)
+    }
+
     private fun getModelDir(): File {
         val dir = File(context.filesDir, "models")
         if (!dir.exists()) dir.mkdirs()
