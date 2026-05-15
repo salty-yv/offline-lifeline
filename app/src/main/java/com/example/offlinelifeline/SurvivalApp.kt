@@ -42,6 +42,8 @@ fun SurvivalApp() {
 
     LaunchedEffect(Unit) {
         appContainer.deviceDiagnosticsLogger.logSnapshot("app_start")
+        // 首次启动时把 asset DB 里的 guide chunk 数据导入主数据库（幂等，已有数据则跳过）
+        appContainer.guideChunkSeeder.seedIfNeeded()
     }
 
     CompositionLocalProvider(LocalAppStrings provides strings) {

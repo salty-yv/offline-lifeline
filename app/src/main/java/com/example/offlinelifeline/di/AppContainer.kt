@@ -18,6 +18,7 @@ import com.example.offlinelifeline.core.logging.DebugLogExporter
 import com.example.offlinelifeline.core.logging.DebugLogger
 import com.example.offlinelifeline.data.datastore.SettingsStore
 import com.example.offlinelifeline.data.db.AppDatabase
+import com.example.offlinelifeline.data.db.GuideChunkSeeder
 import com.example.offlinelifeline.data.repository.ChatRepository
 import com.example.offlinelifeline.data.repository.EmergencyCardRepository
 import com.example.offlinelifeline.data.repository.GuideRepository
@@ -42,9 +43,6 @@ class AppContainer(context: Context) {
             AppDatabase::class.java,
             DATABASE_NAME
         )
-            // 首次安装时从 assets/databases/offline_guides.db 加载内置数据。
-            // 已有旧版数据库时自动走 Migration，不会覆盖用户已有记录。
-            .createFromAsset("databases/offline_guides.db")
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
@@ -99,6 +97,10 @@ class AppContainer(context: Context) {
 
     val guideChunkDao by lazy {
         database.guideChunkDao()
+    }
+
+    val guideChunkSeeder by lazy {
+        GuideChunkSeeder(appContext, guideChunkDao)
     }
 
     val settingsStore: SettingsStore by lazy {

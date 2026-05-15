@@ -1,6 +1,8 @@
 package com.example.offlinelifeline.data.db
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 /**
@@ -77,4 +79,17 @@ interface GuideChunkDao {
      */
     @Query("SELECT COUNT(*) FROM guide_chunks_fts")
     suspend fun countChunks(): Int
+
+    /**
+     * 批量插入 chunk，供 [com.example.offlinelifeline.data.db.GuideChunkSeeder] 使用。
+     * 使用 IGNORE 策略避免重复插入导致崩溃。
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(chunks: List<GuideChunkFtsEntity>)
+
+    /**
+     * 清空 FTS 表（强制重新导入时使用）。
+     */
+    @Query("DELETE FROM guide_chunks_fts")
+    suspend fun clearAll()
 }
