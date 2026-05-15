@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.offlinelifeline.core.model.ChatConversation
 import com.example.offlinelifeline.core.model.ToolType
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 import kotlinx.coroutines.launch
 
 @Composable
@@ -56,6 +57,7 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showCamera by remember { mutableStateOf(false) }
@@ -86,8 +88,8 @@ fun ChatScreen(
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text("清空当前对话？") },
-            text = { Text("这会删除当前对话里的本地消息，并重置模型上下文。这个操作不能撤销。") },
+            title = { Text(strings.clearCurrentDialogTitle) },
+            text = { Text(strings.clearCurrentDialogBody) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -95,12 +97,12 @@ fun ChatScreen(
                         viewModel.clearConversation()
                     }
                 ) {
-                    Text("确认清空")
+                    Text(strings.confirmClear)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
-                    Text("取消")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -109,8 +111,8 @@ fun ChatScreen(
     conversationToDelete?.let { conversation ->
         AlertDialog(
             onDismissRequest = { conversationToDelete = null },
-            title = { Text("删除这条对话？") },
-            text = { Text("这会删除「${conversation.title}」里的本地消息记录。删除后不能撤销。") },
+            title = { Text(strings.deleteConversationTitle) },
+            text = { Text(strings.deleteConversationBody(conversation.title)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -118,12 +120,12 @@ fun ChatScreen(
                         viewModel.deleteConversation(conversation.id)
                     }
                 ) {
-                    Text("确认删除")
+                    Text(strings.confirmDelete)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { conversationToDelete = null }) {
-                    Text("取消")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -152,19 +154,19 @@ fun ChatScreen(
             ) {
                 if (showHistoryButton) {
                     TextButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Text("历史记录")
+                        Text(strings.history)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 TextButton(onClick = viewModel::createConversation) {
-                    Text("新建对话")
+                    Text(strings.newConversation)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(
                     enabled = uiState.messages.isNotEmpty() || uiState.pendingImages.isNotEmpty(),
                     onClick = { showClearConfirm = true }
                 ) {
-                    Text("清空当前")
+                    Text(strings.clearCurrent)
                 }
             }
 
@@ -270,7 +272,7 @@ private fun ConversationHistoryPanel(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
-                text = "历史记录",
+                text = LocalAppStrings.current.history,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleMedium
             )
@@ -280,7 +282,7 @@ private fun ConversationHistoryPanel(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
             ) {
-                Text("新建对话")
+                Text(LocalAppStrings.current.newConversation)
             }
             LazyColumn(
                 modifier = Modifier
@@ -339,7 +341,7 @@ private fun ConversationHistoryRow(
             }
         )
         TextButton(onClick = onDelete) {
-            Text("删除")
+            Text(LocalAppStrings.current.delete)
         }
     }
 }

@@ -51,7 +51,7 @@ class SettingsStore(context: Context) {
 }
 
 data class AppSettings(
-    val languageTag: String,
-    val useMockEngine: Boolean,
-    val debugModeEnabled: Boolean
+    val languageTag: String = "zh-CN",
+    val useMockEngine: Boolean = true,
+    val debugModeEnabled: Boolean = false
 )

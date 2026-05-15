@@ -66,6 +66,12 @@ class MockLlmEngine(
     }
 
     private fun buildMockChunks(request: InferenceRequest): List<String> {
+        val useEnglish = request.systemInstruction
+            .substringAfter("[Reply Language]", missingDelimiterValue = "")
+            .lineSequence()
+            .drop(1)
+            .firstOrNull()
+            ?.contains("English") == true
         val agentPlan = request.systemInstruction
             .substringAfter("[Agent Action Plan]", missingDelimiterValue = "")
             .substringBefore("[Available Local Tools]")
@@ -75,7 +81,11 @@ class MockLlmEngine(
             .trim()
 
         val imageNote = if (request.imagePaths.isNotEmpty()) {
-            "已收到 ${request.imagePaths.size} 张本地处理后的图片。当前 Mock/降级运行时不会读取图片像素，请用文字补充图片中的关键内容。我会先按保守原则给出建议。\n\n"
+            if (useEnglish) {
+                "Received ${request.imagePaths.size} locally processed image(s). The current Mock/fallback runtime cannot inspect image pixels. Please describe the key visible details in text. I will give conservative advice first.\n\n"
+            } else {
+                "已收到 ${request.imagePaths.size} 张本地处理后的图片。当前 Mock/降级运行时不会读取图片像素，请用文字补充图片中的关键内容。我会先按保守原则给出建议。\n\n"
+            }
         } else {
             ""
         }
@@ -85,7 +95,7 @@ class MockLlmEngine(
                 append(imageNote)
                 append(agentPlan)
                 if (tools.isNotBlank()) {
-                    append("\n\n可使用的本地工具\n")
+                    append(if (useEnglish) "\n\nAvailable local tools\n" else "\n\n可使用的本地工具\n")
                     append(tools)
                 }
             }
@@ -93,10 +103,10 @@ class MockLlmEngine(
             val normalizedInput = request.text.trim()
             buildString {
                 append(imageNote)
-                append("先保持原地安全，减少不必要操作。")
-                append("\n\n你刚才说：")
+                append(if (useEnglish) "First, stay safe where you are and reduce unnecessary actions." else "先保持原地安全，减少不必要操作。")
+                append(if (useEnglish) "\n\nYou said: " else "\n\n你刚才说：")
                 append(normalizedInput)
-                append("\n\n当前为 Mock 输出。")
+                append(if (useEnglish) "\n\nThis is Mock output." else "\n\n当前为 Mock 输出。")
             }
         }
 

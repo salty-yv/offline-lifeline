@@ -27,7 +27,8 @@ class SurvivalAgent(
     fun prepareResponse(
         userInput: String,
         history: List<ChatMessage>,
-        imagePaths: List<String> = emptyList()
+        imagePaths: List<String> = emptyList(),
+        languageTag: String = "zh-CN"
     ): PreparedAgentResponse {
         val scopedHistory = contextManager.summarizeIfNeeded(history)
         val contextMessages = scopedHistory + ChatMessage(
@@ -41,15 +42,16 @@ class SurvivalAgent(
         val context = baseContext.copy(riskDomains = risks)
         val intent = intentClassifier.classify(userInput)
         val questions = questionPlanner.planQuestions(context)
-        val tools = toolRouter.recommendTools(risks, context)
-        val actionStructure = actionPlanner.buildActionStructure(risks, context, questions)
+        val tools = toolRouter.recommendTools(risks, context, languageTag)
+        val actionStructure = actionPlanner.buildActionStructure(risks, context, questions, languageTag)
         val systemInstruction = promptBuilder.buildSystemInstruction(
             context = context,
             actionStructure = actionStructure,
             toolRecommendations = tools,
             intent = intent,
             imagePaths = imagePaths,
-            imageInputSupported = llmEngine.supportsImageInput
+            imageInputSupported = llmEngine.supportsImageInput,
+            languageTag = languageTag
         )
         val safetyInstruction = promptBuilder.buildSafetyInstruction(
             safetyKernel.buildSafetyInstruction(

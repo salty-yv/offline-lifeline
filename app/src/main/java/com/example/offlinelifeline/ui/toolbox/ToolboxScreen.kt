@@ -49,6 +49,7 @@ import androidx.core.content.ContextCompat
 import com.example.offlinelifeline.core.model.ToolType
 import com.example.offlinelifeline.ui.emergencycard.EmergencyCardScreen
 import com.example.offlinelifeline.ui.emergencycard.EmergencyCardViewModel
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
 fun ToolboxScreen(
@@ -132,6 +133,7 @@ private fun ToolboxHome(
     onOpenDebugLog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -139,11 +141,11 @@ private fun ToolboxHome(
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { ToolCard("SOS 闪光灯", "打开手电筒或发送 SOS 闪烁信号。", onOpenFlashlight) }
-        item { ToolCard("屏幕 SOS", "全屏高亮显示 SOS，并保持屏幕常亮。", onOpenScreenSos) }
-        item { ToolCard("电量保护建议", "读取本机电量并给出离线省电建议。", onOpenBattery) }
-        item { ToolCard("个人应急信息卡", "本地保存并展示给救援人员。", onOpenEmergencyCard) }
-        item { ToolCard("Debug Log 导出", "导出本地日志文件，不自动上传。", onOpenDebugLog) }
+        item { ToolCard(strings.sosFlashlightTitle, strings.sosFlashlightBody, onOpenFlashlight) }
+        item { ToolCard(strings.screenSosTitle, strings.screenSosBody, onOpenScreenSos) }
+        item { ToolCard(strings.batteryAdviceTitle, strings.batteryAdviceBody, onOpenBattery) }
+        item { ToolCard(strings.emergencyCardEditorTitle, strings.emergencyCardToolBody, onOpenEmergencyCard) }
+        item { ToolCard(strings.debugLogTitle, strings.debugLogBody, onOpenDebugLog) }
     }
 }
 
@@ -186,6 +188,7 @@ private fun FlashlightTool(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -206,9 +209,9 @@ private fun FlashlightTool(
         onDispose { onStopSos() }
     }
 
-    ToolPanelScaffold(title = "SOS 闪光灯", onBack = onBack, modifier = modifier) {
-        Text("闪光灯状态：${if (uiState.isTorchOn) "已开启" else "已关闭"}")
-        Text("SOS 闪烁：${if (uiState.isSosFlashing) "运行中" else "未运行"}")
+    ToolPanelScaffold(title = strings.sosFlashlightTitle, onBack = onBack, modifier = modifier) {
+        Text("${strings.flashlightStatus}: ${if (uiState.isTorchOn) strings.flashlightOn else strings.flashlightOff}")
+        Text("${strings.sosFlashStatus}: ${if (uiState.isSosFlashing) strings.running else strings.notRunning}")
         uiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -216,7 +219,7 @@ private fun FlashlightTool(
                 enabled = uiState.isTorchAvailable && !uiState.isSosFlashing,
                 onClick = { withCameraPermission { onTorchChanged(!uiState.isTorchOn) } }
             ) {
-                Text(if (uiState.isTorchOn) "关闭" else "打开")
+                Text(if (uiState.isTorchOn) strings.turnOff else strings.turnOn)
             }
             Button(
                 enabled = uiState.isTorchAvailable,
@@ -226,7 +229,7 @@ private fun FlashlightTool(
                     }
                 }
             ) {
-                Text(if (uiState.isSosFlashing) "停止 SOS" else "启动 SOS")
+                Text(if (uiState.isSosFlashing) strings.stopSos else strings.startSos)
             }
         }
     }
@@ -239,17 +242,18 @@ private fun BatteryTool(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ToolPanelScaffold(title = "电量保护建议", onBack = onBack, modifier = modifier) {
+    val strings = LocalAppStrings.current
+    ToolPanelScaffold(title = strings.batteryAdviceTitle, onBack = onBack, modifier = modifier) {
         Text(
-            text = "当前电量：${uiState.batteryStatus.percent?.let { "$it%" } ?: "未知"}"
+            text = "${strings.currentBattery}: ${uiState.batteryStatus.percent?.let { "$it%" } ?: strings.unknown}"
         )
         Text(
-            text = if (uiState.batteryStatus.isCharging) "状态：正在充电" else "状态：未充电"
+            text = if (uiState.batteryStatus.isCharging) strings.charging else strings.notCharging
         )
         Button(onClick = onRefresh) {
-            Text("刷新")
+            Text(strings.refresh)
         }
-        uiState.batteryAdvice.forEachIndexed { index, item ->
+        strings.batteryAdvice(uiState.batteryStatus).forEachIndexed { index, item ->
             Text("${index + 1}. $item")
         }
     }
@@ -263,19 +267,20 @@ private fun DebugLogTool(
     onRecordSnapshot: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ToolPanelScaffold(title = "Debug Log 导出", onBack = onBack, modifier = modifier) {
-        Text("日志只保存在本机。导出文件会写入应用专属外部目录。")
+    val strings = LocalAppStrings.current
+    ToolPanelScaffold(title = strings.debugLogTitle, onBack = onBack, modifier = modifier) {
+        Text(strings.debugLogNote)
         Button(onClick = onRecordSnapshot) {
-            Text("记录稳定性快照")
+            Text(strings.recordSnapshot)
         }
         Button(onClick = onExport) {
-            Text("导出 .txt")
+            Text(strings.exportTxt)
         }
         uiState.stabilitySnapshotMessage?.let {
             Text(it, color = MaterialTheme.colorScheme.primary)
         }
         uiState.exportedLogFile?.let {
-            Text("已导出：${it.absolutePath}")
+            Text(strings.exported(it.absolutePath))
         }
         uiState.errorMessage?.let {
             Text(it, color = MaterialTheme.colorScheme.error)
@@ -290,6 +295,7 @@ private fun ToolPanelScaffold(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -297,7 +303,7 @@ private fun ToolPanelScaffold(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text("返回工具箱")
+            Text(strings.backToToolbox)
         }
         Text(
             text = title,
@@ -314,6 +320,7 @@ private fun ScreenSosDialog(
 ) {
     val view = LocalView.current
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val activity = context as? Activity
 
     DisposableEffect(Unit) {
@@ -359,7 +366,7 @@ private fun ScreenSosDialog(
                     fontWeight = FontWeight.Bold
                 )
                 Button(onClick = onDismiss) {
-                    Text("退出")
+                    Text(strings.exit)
                 }
             }
         }

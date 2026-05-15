@@ -1,33 +1,35 @@
 package com.example.offlinelifeline.ui.navigation
 
-enum class Route(
-    val title: String,
-    val iconLabel: String,
-    val placeholderText: String
-) {
-    Chat(
-        title = "对话",
-        iconLabel = "聊",
-        placeholderText = "文字对话入口"
-    ),
-    Toolbox(
-        title = "工具箱",
-        iconLabel = "工",
-        placeholderText = "SOS、电量建议等本地工具"
-    ),
-    Guide(
-        title = "指南",
-        iconLabel = "指",
-        placeholderText = "离线指南列表"
-    ),
-    EmergencyCard(
-        title = "信息卡",
-        iconLabel = "卡",
-        placeholderText = "个人应急信息卡"
-    ),
-    Settings(
-        title = "设置",
-        iconLabel = "设",
-        placeholderText = "语言、模型模式和隐私设置将在后续阶段补齐。"
-    )
+import com.example.offlinelifeline.ui.i18n.AppStrings
+
+enum class Route {
+    Chat,
+    Toolbox,
+    Guide,
+    EmergencyCard,
+    Settings;
+
+    fun title(strings: AppStrings): String = when (this) {
+        Chat -> strings.routeChat
+        Toolbox -> strings.routeToolbox
+        Guide -> strings.routeGuide
+        EmergencyCard -> strings.routeEmergencyCard
+        Settings -> strings.routeSettings
+    }
+
+    fun iconLabel(strings: AppStrings): String = when (this) {
+        Chat -> strings.routeChatIcon
+        Toolbox -> strings.routeToolboxIcon
+        Guide -> strings.routeGuideIcon
+        EmergencyCard -> strings.routeEmergencyCardIcon
+        Settings -> strings.routeSettingsIcon
+    }
+
+    fun placeholderText(strings: AppStrings): String = when (this) {
+        Chat -> strings.routeChatPlaceholder
+        Toolbox -> strings.routeToolboxPlaceholder
+        Guide -> strings.routeGuidePlaceholder
+        EmergencyCard -> strings.routeEmergencyCardPlaceholder
+        Settings -> strings.routeSettingsPlaceholder
+    }
 }

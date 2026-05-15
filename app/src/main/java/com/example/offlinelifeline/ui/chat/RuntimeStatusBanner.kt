@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.core.model.ModelRuntimeState
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
 fun RuntimeStatusBanner(
@@ -18,19 +19,20 @@ fun RuntimeStatusBanner(
     errorMessage: String?,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     val message = when {
         errorMessage != null -> errorMessage
-        isGenerating -> "正在生成回复..."
-        modelAssetState is ModelRuntimeState.Checking -> "正在检查真实模型文件..."
-        modelAssetState is ModelRuntimeState.Missing -> "真实模型不可用，可使用 Mock 对话、离线指南和工具箱。"
-        modelAssetState is ModelRuntimeState.ChecksumFailed -> "模型校验失败，已阻止真实模型加载；仍可使用 Mock 和离线工具。"
-        modelAssetState is ModelRuntimeState.ReadyToLoad && runtimeState is ModelRuntimeState.Ready -> "真实模型已就绪，LiteRT-LM 引擎已加载。"
-        modelAssetState is ModelRuntimeState.ReadyToLoad -> "真实模型文件已就绪，正在准备 LiteRT-LM 引擎。"
-        runtimeState is ModelRuntimeState.Loading -> "正在初始化 Mock 模型..."
-        runtimeState is ModelRuntimeState.Ready -> "Mock 模型已就绪"
+        isGenerating -> strings.generatingReply
+        modelAssetState is ModelRuntimeState.Checking -> strings.checkingRealModel
+        modelAssetState is ModelRuntimeState.Missing -> strings.realModelMissing
+        modelAssetState is ModelRuntimeState.ChecksumFailed -> strings.checksumFailed
+        modelAssetState is ModelRuntimeState.ReadyToLoad && runtimeState is ModelRuntimeState.Ready -> strings.realModelReady
+        modelAssetState is ModelRuntimeState.ReadyToLoad -> strings.realModelReadyToLoad
+        runtimeState is ModelRuntimeState.Loading -> strings.mockModelLoading
+        runtimeState is ModelRuntimeState.Ready -> strings.mockModelReady
         runtimeState is ModelRuntimeState.Failed -> runtimeState.message
-        runtimeState is ModelRuntimeState.Released -> "Mock 模型已释放"
-        else -> "Mock 模型待初始化"
+        runtimeState is ModelRuntimeState.Released -> strings.mockModelReleased
+        else -> strings.mockModelPending
     }
 
     val containerColor = if (errorMessage != null || modelAssetState is ModelRuntimeState.ChecksumFailed) {

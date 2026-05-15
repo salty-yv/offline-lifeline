@@ -10,6 +10,7 @@ import com.example.offlinelifeline.core.model.Attachment
 import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
 import com.example.offlinelifeline.core.model.ModelRuntimeState
+import com.example.offlinelifeline.data.datastore.SettingsStore
 import com.example.offlinelifeline.data.repository.ChatRepository
 import com.example.offlinelifeline.inference.LocalLlmEngine
 import com.example.offlinelifeline.inference.ModelAssetManager
@@ -29,12 +30,14 @@ class ChatViewModel(
     private val survivalAgent: SurvivalAgent,
     private val modelAssetManager: ModelAssetManager,
     private val imagePreprocessor: ImagePreprocessor,
+    private val settingsStore: SettingsStore,
     private val timeProvider: TimeProvider = TimeProvider.System
 ) : ViewModel() {
     private val _uiState = kotlinx.coroutines.flow.MutableStateFlow(ChatUiState())
     val uiState: kotlinx.coroutines.flow.StateFlow<ChatUiState> = _uiState
 
     private var generationJob: Job? = null
+    private var languageTag: String = "zh-CN"
 
     init {
         viewModelScope.launch {
@@ -68,6 +71,12 @@ class ChatViewModel(
                 _uiState.update { it.copy(runtimeState = runtimeState) }
             }
         }
+
+        viewModelScope.launch {
+            settingsStore.settings.collect { settings ->
+                languageTag = settings.languageTag
+            }
+        }
     }
 
     fun onInputChanged(text: String) {
@@ -95,7 +104,15 @@ class ChatViewModel(
         val state = _uiState.value
         val conversationId = state.selectedConversationId ?: return
         val text = state.inputText.trim().ifBlank {
-            if (state.pendingImages.isNotEmpty()) "我添加了一张现场图片，请先按保守原则给出文字辅助建议。" else ""
+            if (state.pendingImages.isNotEmpty()) {
+                if (languageTag.startsWith("en")) {
+                    "I added an on-site image. Please give conservative text-based advice first."
+                } else {
+                    "我添加了一张现场图片，请先按保守原则给出文字辅助建议。"
+                }
+            } else {
+                ""
+            }
         }
         val pendingImages = state.pendingImages
         if (text.isBlank() || state.isGenerating || state.isProcessingImage) return
@@ -131,7 +148,8 @@ class ChatViewModel(
             val preparedResponse = survivalAgent.prepareResponse(
                 userInput = text,
                 history = _uiState.value.messages.filter { it.id != assistantMessage.id },
-                imagePaths = pendingImages.map { it.localPath }
+                imagePaths = pendingImages.map { it.localPath },
+                languageTag = languageTag
             )
             val assistantMessageWithTools = assistantMessage.copy(
                 toolRecommendations = preparedResponse.response.toolRecommendations
@@ -342,12 +360,20 @@ class ChatViewModel(
         private val llmEngine: LocalLlmEngine,
         private val survivalAgent: SurvivalAgent,
         private val modelAssetManager: ModelAssetManager,
-        private val imagePreprocessor: ImagePreprocessor
+        private val imagePreprocessor: ImagePreprocessor,
+        private val settingsStore: SettingsStore
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
-                return ChatViewModel(chatRepository, llmEngine, survivalAgent, modelAssetManager, imagePreprocessor) as T
+                return ChatViewModel(
+                    chatRepository = chatRepository,
+                    llmEngine = llmEngine,
+                    survivalAgent = survivalAgent,
+                    modelAssetManager = modelAssetManager,
+                    imagePreprocessor = imagePreprocessor,
+                    settingsStore = settingsStore
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

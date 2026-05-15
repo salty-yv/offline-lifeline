@@ -10,7 +10,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,9 +21,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.offlinelifeline.core.model.ToolType
+import com.example.offlinelifeline.data.datastore.AppSettings
 import com.example.offlinelifeline.di.AppContainer
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
+import com.example.offlinelifeline.ui.i18n.appStringsFor
 import com.example.offlinelifeline.ui.navigation.AppNavHost
 import com.example.offlinelifeline.ui.navigation.Route
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,40 +36,51 @@ fun SurvivalApp() {
     var selectedTool by rememberSaveable { mutableStateOf<ToolType?>(null) }
     val context = LocalContext.current
     val appContainer = remember(context) { AppContainer(context) }
+    val settings by appContainer.settingsStore.settings.collectAsState(initial = AppSettings())
+    val strings = appStringsFor(settings.languageTag)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         appContainer.deviceDiagnosticsLogger.logSnapshot("app_start")
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(selectedRoute.title) }
-            )
-        },
-        bottomBar = {
-            SurvivalBottomBar(
+    CompositionLocalProvider(LocalAppStrings provides strings) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text(selectedRoute.title(strings)) }
+                )
+            },
+            bottomBar = {
+                SurvivalBottomBar(
+                    selectedRoute = selectedRoute,
+                    onRouteSelected = {
+                        selectedTool = null
+                        selectedRoute = it
+                    }
+                )
+            }
+        ) { innerPadding ->
+            AppNavHost(
                 selectedRoute = selectedRoute,
-                onRouteSelected = {
-                    selectedTool = null
-                    selectedRoute = it
-                }
+                selectedTool = selectedTool,
+                onToolSelected = { toolType ->
+                    selectedTool = toolType
+                    selectedRoute = toolType.toRoute()
+                },
+                settings = settings,
+                onLanguageSelected = { languageTag ->
+                    scope.launch {
+                        appContainer.settingsStore.setLanguageTag(languageTag)
+                    }
+                },
+                appContainer = appContainer,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
             )
         }
-    ) { innerPadding ->
-        AppNavHost(
-            selectedRoute = selectedRoute,
-            selectedTool = selectedTool,
-            onToolSelected = { toolType ->
-                selectedTool = toolType
-                selectedRoute = toolType.toRoute()
-            },
-            appContainer = appContainer,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        )
     }
 }
 
@@ -82,13 +100,14 @@ private fun SurvivalBottomBar(
     selectedRoute: Route,
     onRouteSelected: (Route) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     NavigationBar {
         Route.entries.forEach { route ->
             NavigationBarItem(
                 selected = selectedRoute == route,
                 onClick = { onRouteSelected(route) },
-                icon = { Text(route.iconLabel) },
-                label = { Text(route.title) }
+                icon = { Text(route.iconLabel(strings)) },
+                label = { Text(route.title(strings)) }
             )
         }
     }

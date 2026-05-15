@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
 fun EmergencyCardScreen(
@@ -70,6 +71,7 @@ private fun EmergencyCardEditor(
     onShowRescueView: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -78,18 +80,18 @@ private fun EmergencyCardEditor(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "本地个人应急信息卡",
+            text = strings.emergencyCardEditorTitle,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
 
-        EmergencyTextField("姓名", uiState.name, onNameChanged)
-        EmergencyTextField("血型", uiState.bloodType, onBloodTypeChanged)
-        EmergencyTextField("过敏史", uiState.allergies, onAllergiesChanged)
-        EmergencyTextField("慢性病", uiState.chronicConditions, onChronicConditionsChanged)
-        EmergencyTextField("常用药", uiState.medications, onMedicationsChanged)
-        EmergencyTextField("紧急联系人", uiState.emergencyContact, onEmergencyContactChanged)
-        EmergencyTextField("备注", uiState.notes, onNotesChanged, minLines = 3)
+        EmergencyTextField(strings.name, uiState.name, onNameChanged)
+        EmergencyTextField(strings.bloodType, uiState.bloodType, onBloodTypeChanged)
+        EmergencyTextField(strings.allergies, uiState.allergies, onAllergiesChanged)
+        EmergencyTextField(strings.chronicConditions, uiState.chronicConditions, onChronicConditionsChanged)
+        EmergencyTextField(strings.medications, uiState.medications, onMedicationsChanged)
+        EmergencyTextField(strings.emergencyContact, uiState.emergencyContact, onEmergencyContactChanged)
+        EmergencyTextField(strings.notes, uiState.notes, onNotesChanged, minLines = 3)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -100,7 +102,7 @@ private fun EmergencyCardEditor(
                 onCheckedChange = onHideSensitiveFieldsChanged
             )
             Text(
-                text = "默认隐藏敏感字段",
+                text = strings.hideSensitiveFields,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -109,10 +111,10 @@ private fun EmergencyCardEditor(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Button(onClick = onSave) {
-                Text("保存")
+                Text(strings.save)
             }
             TextButton(onClick = onShowRescueView) {
-                Text("展示给救援人员")
+                Text(strings.showToRescuers)
             }
         }
 
@@ -149,6 +151,7 @@ private fun RescueCardView(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -157,7 +160,7 @@ private fun RescueCardView(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text("返回编辑")
+            Text(strings.backToEdit)
         }
 
         Card(
@@ -172,18 +175,18 @@ private fun RescueCardView(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "应急信息",
+                    text = strings.emergencyInformation,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                RescueLine("姓名", uiState.name)
-                RescueLine("血型", uiState.bloodType)
-                RescueLine("紧急联系人", uiState.emergencyContact)
+                RescueLine(strings.name, uiState.name)
+                RescueLine(strings.bloodType, uiState.bloodType)
+                RescueLine(strings.emergencyContact, uiState.emergencyContact)
                 if (!uiState.hideSensitiveFields) {
-                    RescueLine("过敏史", uiState.allergies)
-                    RescueLine("慢性病", uiState.chronicConditions)
-                    RescueLine("常用药", uiState.medications)
-                    RescueLine("备注", uiState.notes)
+                    RescueLine(strings.allergies, uiState.allergies)
+                    RescueLine(strings.chronicConditions, uiState.chronicConditions)
+                    RescueLine(strings.medications, uiState.medications)
+                    RescueLine(strings.notes, uiState.notes)
                 }
             }
         }
@@ -192,6 +195,7 @@ private fun RescueCardView(
 
 @Composable
 private fun RescueLine(label: String, value: String) {
+    val strings = LocalAppStrings.current
     Column {
         Text(
             text = label,
@@ -199,7 +203,7 @@ private fun RescueLine(label: String, value: String) {
             color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.78f)
         )
         Text(
-            text = value.ifBlank { "未填写" },
+            text = value.ifBlank { strings.notFilled },
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )

@@ -27,6 +27,7 @@ import com.example.offlinelifeline.core.model.ChatMessage
 import com.example.offlinelifeline.core.model.ChatRole
 import com.example.offlinelifeline.core.model.ToolRecommendation
 import com.example.offlinelifeline.core.model.ToolType
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
 fun ChatMessageBubble(
@@ -95,6 +96,7 @@ fun ChatMessageBubble(
 
 @Composable
 private fun MessageImagePreview(image: Attachment.Image) {
+    val strings = LocalAppStrings.current
     val bitmap = remember(image.localPath) {
         BitmapFactory.decodeFile(image.localPath)
     }
@@ -105,13 +107,13 @@ private fun MessageImagePreview(image: Attachment.Image) {
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "attached image",
+                contentDescription = strings.attachedImageContentDescription,
                 modifier = Modifier.size(72.dp),
                 contentScale = ContentScale.Crop
             )
         } else {
             Text(
-                text = "图片",
+                text = strings.image,
                 modifier = Modifier.padding(18.dp),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -125,31 +127,21 @@ private fun ToolRecommendationList(
     onToolSelected: (ToolType) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "推荐工具",
+            text = strings.recommendedTools,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         recommendations.forEach { recommendation ->
             AssistChip(
                 onClick = { onToolSelected(recommendation.toolType) },
-                label = { Text(recommendation.toolType.displayName()) }
+                label = { Text(strings.toolName(recommendation.toolType)) }
             )
         }
-    }
-}
-
-private fun ToolType.displayName(): String {
-    return when (this) {
-        ToolType.SOS_FLASHLIGHT -> "SOS 闪光灯"
-        ToolType.SCREEN_SOS -> "屏幕 SOS"
-        ToolType.BATTERY_SAVER_ADVICE -> "电量保护建议"
-        ToolType.EMERGENCY_CARD -> "个人应急信息卡"
-        ToolType.OFFLINE_GUIDE -> "离线指南"
-        ToolType.DEBUG_LOG_EXPORT -> "Debug Log 导出"
     }
 }

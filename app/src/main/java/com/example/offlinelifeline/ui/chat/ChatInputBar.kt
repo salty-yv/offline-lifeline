@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.core.model.Attachment
+import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
 fun ChatInputBar(
@@ -46,6 +47,7 @@ fun ChatInputBar(
     onRemoveImage: (Attachment.Image) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -79,16 +81,16 @@ fun ChatInputBar(
             AssistChip(
                 enabled = !isGenerating && !isProcessingImage,
                 onClick = onOpenCamera,
-                label = { Text("拍照") }
+                label = { Text(strings.camera) }
             )
             AssistChip(
                 enabled = !isGenerating && !isProcessingImage,
                 onClick = onPickImage,
-                label = { Text("相册") }
+                label = { Text(strings.gallery) }
             )
             if (isProcessingImage) {
                 Text(
-                    text = "正在处理图片",
+                    text = strings.processingImage,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -103,7 +105,7 @@ fun ChatInputBar(
                 value = text,
                 onValueChange = onTextChanged,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("描述你的情况，也可以附加图片") },
+                placeholder = { Text(strings.chatInputPlaceholder) },
                 minLines = 1,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -117,14 +119,14 @@ fun ChatInputBar(
 
             if (isGenerating) {
                 TextButton(onClick = onStop) {
-                    Text("停止")
+                    Text(strings.stop)
                 }
             } else {
                 Button(
                     onClick = onSend,
                     enabled = canSend
                 ) {
-                    Text("发送")
+                    Text(strings.send)
                 }
             }
         }
@@ -136,6 +138,7 @@ private fun PendingImagePreview(
     image: Attachment.Image,
     onRemove: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val bitmap = remember(image.localPath) {
         BitmapFactory.decodeFile(image.localPath)
     }
@@ -152,19 +155,19 @@ private fun PendingImagePreview(
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
-                    contentDescription = "pending image",
+                    contentDescription = strings.pendingImageContentDescription,
                     modifier = Modifier.size(58.dp),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Text(
-                    text = "图片",
+                    text = strings.image,
                     modifier = Modifier.size(58.dp),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             TextButton(onClick = onRemove) {
-                Text("删除")
+                Text(strings.delete)
             }
         }
     }
