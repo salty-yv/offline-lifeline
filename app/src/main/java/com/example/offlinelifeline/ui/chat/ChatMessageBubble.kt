@@ -48,6 +48,7 @@ fun ChatMessageBubble(
     } else {
         MaterialTheme.colorScheme.onSurface
     }
+    val isWaitingForAssistant = !isUser && message.text.isBlank()
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -76,13 +77,21 @@ fun ChatMessageBubble(
                 }
             } else {
                 Text(
-                    text = if (message.text.isBlank()) "..." else message.text,
+                    text = if (isWaitingForAssistant) "..." else message.text,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 2.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = chatTextSizeSp.sp,
-                        lineHeight = (chatTextSizeSp * 1.45f).sp
+                        fontSize = if (isWaitingForAssistant) {
+                            (chatTextSizeSp + 10).sp
+                        } else {
+                            chatTextSizeSp.sp
+                        },
+                        lineHeight = if (isWaitingForAssistant) {
+                            (chatTextSizeSp + 12).sp
+                        } else {
+                            (chatTextSizeSp * 1.45f).sp
+                        }
                     ),
                     color = textColor
                 )

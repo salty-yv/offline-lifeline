@@ -149,12 +149,6 @@ fun ChatScreen(
     // ── 聊天内容主体 ──────────────────────────────────────────────────────────
     val chatContent: @Composable (Modifier, Boolean) -> Unit = { contentModifier, showMenuIcon ->
         Column(modifier = contentModifier.fillMaxSize()) {
-            RuntimeStatusBanner(
-                runtimeState = uiState.runtimeState,
-                modelAssetState = uiState.modelAssetState,
-                isGenerating = uiState.isGenerating,
-                errorMessage = uiState.errorMessage
-            )
 
             // 顶部操作栏：图标化
             Row(
@@ -173,13 +167,13 @@ fun ChatScreen(
                     }
                 }
 
-                // 标题
-                Text(
-                    text = strings.routeChat,
-                    style = MaterialTheme.typography.titleMedium,
+                RuntimeStatusText(
+                    runtimeState = uiState.runtimeState,
+                    modelAssetState = uiState.modelAssetState,
+                    errorMessage = uiState.errorMessage,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = if (showMenuIcon) 0.dp else 12.dp)
+                        .padding(horizontal = 8.dp)
                 )
 
                 // 右侧：清空当前对话图标

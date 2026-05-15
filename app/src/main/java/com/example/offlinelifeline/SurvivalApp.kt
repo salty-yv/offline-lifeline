@@ -2,8 +2,6 @@ package com.example.offlinelifeline
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -27,7 +25,6 @@ import com.example.offlinelifeline.ui.i18n.appStringsFor
 import com.example.offlinelifeline.ui.navigation.AppNavHost
 import com.example.offlinelifeline.ui.navigation.Route
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SurvivalApp() {
     var selectedRoute by rememberSaveable { mutableStateOf(Route.Chat) }
@@ -46,11 +43,6 @@ fun SurvivalApp() {
     CompositionLocalProvider(LocalAppStrings provides strings) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text(selectedRoute.title(strings)) }
-                )
-            },
             bottomBar = {
                 SurvivalBottomBar(
                     selectedRoute = selectedRoute,
