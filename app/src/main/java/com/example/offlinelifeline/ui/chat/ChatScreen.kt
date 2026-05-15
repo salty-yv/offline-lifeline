@@ -14,16 +14,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -139,7 +146,8 @@ fun ChatScreen(
         }
     }
 
-    val chatContent: @Composable (Modifier, Boolean) -> Unit = { contentModifier, showHistoryButton ->
+    // ── 聊天内容主体 ──────────────────────────────────────────────────────────
+    val chatContent: @Composable (Modifier, Boolean) -> Unit = { contentModifier, showMenuIcon ->
         Column(modifier = contentModifier.fillMaxSize()) {
             RuntimeStatusBanner(
                 runtimeState = uiState.runtimeState,
@@ -148,42 +156,49 @@ fun ChatScreen(
                 errorMessage = uiState.errorMessage
             )
 
+            // 顶部操作栏：图标化
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.End,
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 自由对话模式切换
-                FilterChip(
-                    selected = uiState.isFreeChatMode,
-                    onClick = viewModel::toggleFreeChatMode,
-                    label = {
-                        Text(
-                            if (uiState.isFreeChatMode) strings.freeChatModeOn
-                            else strings.freeChatModeOff
+                // 左侧：菜单图标（仅手机模式显示，宽屏侧边栏常驻不需要）
+                if (showMenuIcon) {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = strings.history
                         )
                     }
+                }
+
+                // 标题
+                Text(
+                    text = strings.routeChat,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = if (showMenuIcon) 0.dp else 12.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                if (showHistoryButton) {
-                    TextButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Text(strings.history)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                TextButton(onClick = viewModel::createConversation) {
-                    Text(strings.newConversation)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                TextButton(
+
+                // 右侧：清空当前对话图标
+                IconButton(
                     enabled = uiState.messages.isNotEmpty() || uiState.pendingImages.isNotEmpty(),
                     onClick = { showClearConfirm = true }
                 ) {
-                    Text(strings.clearCurrent)
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = strings.clearCurrent,
+                        tint = if (uiState.messages.isNotEmpty() || uiState.pendingImages.isNotEmpty())
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
                 }
             }
+
+            HorizontalDivider()
 
             LazyColumn(
                 modifier = Modifier
@@ -231,6 +246,7 @@ fun ChatScreen(
         }
     }
 
+    // ── 布局：宽屏用永久侧边栏，手机用抽屉 ──────────────────────────────────
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val usePermanentHistory = maxWidth >= 720.dp
         if (usePermanentHistory) {
@@ -238,10 +254,12 @@ fun ChatScreen(
                 ConversationHistoryPanel(
                     conversations = uiState.conversations,
                     selectedConversationId = uiState.selectedConversationId,
+                    isFreeChatMode = uiState.isFreeChatMode,
+                    onToggleFreeChatMode = viewModel::toggleFreeChatMode,
                     onNewConversation = viewModel::createConversation,
                     onSelectConversation = viewModel::selectConversation,
                     onDeleteConversation = { conversationToDelete = it },
-                    modifier = Modifier.width(240.dp)
+                    modifier = Modifier.width(260.dp)
                 )
                 chatContent(Modifier.weight(1f), false)
             }
@@ -253,6 +271,8 @@ fun ChatScreen(
                         ConversationHistoryPanel(
                             conversations = uiState.conversations,
                             selectedConversationId = uiState.selectedConversationId,
+                            isFreeChatMode = uiState.isFreeChatMode,
+                            onToggleFreeChatMode = viewModel::toggleFreeChatMode,
                             onNewConversation = {
                                 viewModel.createConversation()
                                 scope.launch { drawerState.close() }
@@ -262,7 +282,7 @@ fun ChatScreen(
                                 scope.launch { drawerState.close() }
                             },
                             onDeleteConversation = { conversationToDelete = it },
-                            modifier = Modifier.width(280.dp)
+                            modifier = Modifier.width(300.dp)
                         )
                     }
                 }
@@ -273,37 +293,77 @@ fun ChatScreen(
     }
 }
 
+// ── 侧边栏面板 ────────────────────────────────────────────────────────────────
 @Composable
 private fun ConversationHistoryPanel(
     conversations: List<ChatConversation>,
     selectedConversationId: String?,
+    isFreeChatMode: Boolean,
+    onToggleFreeChatMode: () -> Unit,
     onNewConversation: () -> Unit,
     onSelectConversation: (String) -> Unit,
     onDeleteConversation: (ChatConversation) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // 标题
             Text(
-                text = LocalAppStrings.current.history,
+                text = strings.history,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleMedium
             )
+
+            // 自由对话模式切换
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = isFreeChatMode,
+                    onClick = onToggleFreeChatMode,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = {
+                        Text(
+                            if (isFreeChatMode) strings.freeChatModeOn
+                            else strings.freeChatModeOff
+                        )
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 新建对话按钮（图标+文字）
             Button(
                 onClick = onNewConversation,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
             ) {
-                Text(LocalAppStrings.current.newConversation)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text(strings.newConversation)
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 对话历史列表
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 8.dp),
+                    .padding(top = 4.dp),
                 contentPadding = PaddingValues(bottom = 12.dp)
             ) {
                 items(
@@ -322,6 +382,7 @@ private fun ConversationHistoryPanel(
     }
 }
 
+// ── 历史记录行 ────────────────────────────────────────────────────────────────
 @Composable
 private fun ConversationHistoryRow(
     conversation: ChatConversation,
@@ -329,6 +390,7 @@ private fun ConversationHistoryRow(
     onSelect: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val backgroundColor = if (selected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -339,14 +401,15 @@ private fun ConversationHistoryRow(
             .fillMaxWidth()
             .background(backgroundColor)
             .clickable(onClick = onSelect)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = conversation.title,
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp),
+                .padding(end = 4.dp),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,
@@ -356,8 +419,13 @@ private fun ConversationHistoryRow(
                 MaterialTheme.colorScheme.onSurfaceVariant
             }
         )
-        TextButton(onClick = onDelete) {
-            Text(LocalAppStrings.current.delete)
+        // 删除按钮改为图标
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = strings.delete,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
     }
 }
