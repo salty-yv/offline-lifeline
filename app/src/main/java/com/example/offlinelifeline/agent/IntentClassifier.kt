@@ -59,10 +59,14 @@ class IntentClassifier {
             // 中文
             "救命", "大量出血", "骨折", "失温", "溺水", "昏迷", "呼吸困难", "胸痛",
             "中毒", "蛇咬", "烧伤", "误食", "脱水严重",
+            "热射病", "休克", "过敏反应", "严重过敏", "喉咙紧", "无法呼吸",
+            "山体滑坡", "泥石流", "暴风雪",
             // 英文
             "mayday", "sos", "drowning", "unconscious", "heavy bleeding",
             "chest pain", "can't breathe", "fracture", "snakebite", "snake bite",
-            "hypothermia", "heatstroke", "severe dehydration"
+            "hypothermia", "heatstroke", "severe dehydration",
+            "anaphylaxis", "anaphylactic", "shock", "heat stroke",
+            "landslide", "mudslide", "blizzard"
         )
 
         /** 普通紧急词：首轮触发 EMERGENCY，非首轮有新处境才触发 */
@@ -70,13 +74,17 @@ class IntentClassifier {
             // 中文
             "迷路", "走丢", "找不到路", "受伤", "出血", "帮我",
             "中暑", "没电", "快没电", "低电量", "被困", "找不到出口",
-            "脚扭", "地震", "洪水", "火灾", "雷暴", "头晕",
+            "脚扭", "扭伤", "崴脚", "地震", "洪水", "火灾", "雷暴", "头晕",
+            "暴雪", "大雪", "滑坡", "泥石流", "山洪", "过敏", "休克", "昏厥",
+            "缺水", "找水", "极端高温", "低温", "求救信号",
             // 英文
             "i'm lost", "i am lost", "injured", "bleeding", "help me",
             "help", "low battery", "no battery", "trapped", "stuck", "can't move",
             "earthquake", "flood", "fire", "lightning", "poisoned", "poisoning",
             "dehydrated", "dizzy", "burn", "burned", "i need help", "emergency",
-            "frostbite", "out of water", "no water", "getting dark"
+            "frostbite", "out of water", "no water", "getting dark",
+            "allergy", "allergic", "sprain", "twisted ankle", "blizzard", "snowstorm",
+            "landslide", "mudslide", "heat stroke", "water shortage"
         )
 
         /** 操作步骤 / 制作方法关键词（中英双语） */

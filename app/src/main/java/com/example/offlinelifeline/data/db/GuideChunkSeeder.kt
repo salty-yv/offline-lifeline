@@ -132,9 +132,13 @@ class GuideChunkSeeder(
          * ⚠️ 每次修改指南内容并重新运行 scripts/build_guides_db.py 后，
          * 必须把这个数字 +1，已安装的设备才会在下次启动时自动更新。
          *
-         * 当前版本：1（初始版本，包含 15 篇基础指南）
+         * 版本历史：
+         * - v1：初始版本，包含 15 篇基础指南
+         * - v2：新增 allergy、shock、sprain、heatstroke_severe、blizzard、
+         *        landslide、mudslide、extreme_heat、low_temperature、
+         *        water_shortage、rescue_signal，共 26 篇指南 / 78 chunks
          */
-        const val GUIDE_DATA_VERSION = 1
+        const val GUIDE_DATA_VERSION = 2
 
         private const val PREFS_NAME = "guide_chunk_seeder"
         private const val KEY_VERSION = "guide_data_version"

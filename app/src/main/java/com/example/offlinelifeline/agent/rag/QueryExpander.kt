@@ -25,7 +25,7 @@ object QueryExpander {
         "bleeding" to listOf("blood", "wound", "pressure", "bandage", "tourniquet", "hemorrhage"),
 
         "骨折"    to listOf("扭伤", "变形", "疼痛", "固定", "不能动"),
-        "扭伤"    to listOf("骨折", "脚踝", "疼痛", "固定"),
+        "扭伤"    to listOf("骨折", "脚踝", "疼痛", "固定", "冷敷"),
         "fracture" to listOf("sprain", "break", "immobilize", "pain"),
 
         "烧伤"    to listOf("烫伤", "水泡", "降温", "起泡", "热源"),
@@ -51,6 +51,65 @@ object QueryExpander {
         "误食"    to listOf("蘑菇", "野果", "中毒", "催吐", "腹痛"),
         "蘑菇"    to listOf("误食", "中毒", "野果"),
         "poisoning" to listOf("mushroom", "toxic", "vomit", "stomach"),
+
+        // ── 过敏 ─────────────────────────────────────────────────────────────
+        "过敏"    to listOf("荨麻疹", "肿胀", "呼吸困难", "过敏反应", "肾上腺素", "休克"),
+        "过敏反应" to listOf("过敏", "肿胀", "呼吸困难", "肾上腺素"),
+        "荨麻疹"  to listOf("过敏", "皮疹", "过敏反应"),
+        "allergy" to listOf("allergic", "anaphylaxis", "hives", "rash", "epinephrine", "antihistamine"),
+        "anaphylaxis" to listOf("allergy", "allergic", "epinephrine", "shock"),
+
+        // ── 休克 ─────────────────────────────────────────────────────────────
+        "休克"    to listOf("意识模糊", "血压低", "脉搏弱", "保暖", "抬高双腿", "急救"),
+        "昏厥"    to listOf("休克", "意识模糊", "血压低"),
+        "shock"   to listOf("unconscious", "low blood pressure", "weak pulse", "raise legs", "warmth"),
+
+        // ── 扭伤（RICE 原则）────────────────────────────────────────────────
+        "崴脚"    to listOf("扭伤", "脚踝", "肿胀", "冷敷", "固定"),
+        "捻挫"    to listOf("扭伤", "骨折", "肿胀", "冷敷"),
+        "sprain"  to listOf("ankle", "twist", "swelling", "ice", "compress", "rice"),
+
+        // ── 热射病 ───────────────────────────────────────────────────────────
+        "热射病"  to listOf("中暑", "高热", "意识不清", "降温", "冰敷", "急救"),
+        "高热"    to listOf("热射病", "中暑", "降温", "冷却"),
+        "heat stroke" to listOf("heatstroke", "hyperthermia", "cooling", "ice", "unconscious"),
+
+        // ── 极端高温 ─────────────────────────────────────────────────────────
+        "极端高温" to listOf("中暑", "热射病", "降温", "补水", "遮阴"),
+        "heat"    to listOf("heatstroke", "sunstroke", "cooling", "shade", "hydration"),
+
+        // ── 低温 ─────────────────────────────────────────────────────────────
+        "低温"    to listOf("失温", "保暖", "干衣", "发抖", "寒冷"),
+        "体温低"  to listOf("失温", "低温", "保暖"),
+        "cold"    to listOf("hypothermia", "frostbite", "warmth", "shelter", "dry clothes"),
+
+        // ── 暴雪 ─────────────────────────────────────────────────────────────
+        "暴雪"    to listOf("大雪", "失温", "保暖", "避险", "遮蔽"),
+        "大雪"    to listOf("暴雪", "失温", "保暖"),
+        "blizzard" to listOf("snowstorm", "hypothermia", "shelter", "warmth", "visibility"),
+        "snowstorm" to listOf("blizzard", "snow", "cold", "shelter", "hypothermia"),
+
+        // ── 山体滑坡 ─────────────────────────────────────────────────────────
+        "山体滑坡" to listOf("滑坡", "塌方", "撤离", "崩塌", "地震"),
+        "滑坡"    to listOf("山体滑坡", "崩塌", "撤离", "余震"),
+        "崩塌"    to listOf("山体滑坡", "滑坡", "塌方"),
+        "landslide" to listOf("rockslide", "collapse", "evacuate", "debris", "earthquake"),
+        "rockslide" to listOf("landslide", "collapse", "debris"),
+
+        // ── 泥石流 ───────────────────────────────────────────────────────────
+        "泥石流"  to listOf("山洪", "洪水", "地质灾害", "逃生", "溪谷"),
+        "山洪"    to listOf("泥石流", "洪水", "涨水"),
+        "mudslide" to listOf("debris flow", "flood", "evacuate", "river", "landslide"),
+
+        // ── 缺水 / 水源 ───────────────────────────────────────────────────────
+        "缺水"    to listOf("脱水", "口渴", "找水", "水源", "补水"),
+        "找水"    to listOf("缺水", "水源", "脱水"),
+        "水源"    to listOf("缺水", "找水", "补水"),
+        "water shortage" to listOf("no water", "dehydration", "find water", "thirsty"),
+
+        // ── 求救信号 ─────────────────────────────────────────────────────────
+        "求救信号" to listOf("SOS", "信号", "闪光灯", "标记", "屏幕", "求救"),
+        "rescue signal" to listOf("SOS", "signal", "flashlight", "screen", "help"),
 
         // ── 导航类 ───────────────────────────────────────────────────────────
         "迷路"    to listOf("找不到路", "方向", "求救", "信号", "原地等待"),
