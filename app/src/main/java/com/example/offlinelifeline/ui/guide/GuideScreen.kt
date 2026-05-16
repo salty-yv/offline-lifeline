@@ -3,8 +3,6 @@ package com.example.offlinelifeline.ui.guide
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -473,7 +470,6 @@ private val EnglishGuideText = mapOf(
 )
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun GuideListItem(
     guide: GuideEntity,
     onClick: () -> Unit,
@@ -506,31 +502,9 @@ private fun GuideListItem(
                 text = guide.summary,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                guide.tags.split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                    .take(1)
-                    .forEach { tag ->
-                        AssistChip(
-                            onClick = onClick,
-                            label = {
-                                Text(
-                                    text = tag,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            modifier = Modifier.widthIn(max = 180.dp)
-                        )
-                    }
-            }
         }
     }
 }
