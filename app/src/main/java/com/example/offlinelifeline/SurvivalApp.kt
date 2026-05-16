@@ -1,5 +1,7 @@
 package com.example.offlinelifeline
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -10,10 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,10 +47,32 @@ import com.example.offlinelifeline.ui.navigation.Route
 fun SurvivalApp() {
     var selectedRoute by rememberSaveable { mutableStateOf(Route.Chat) }
     var selectedTool by rememberSaveable { mutableStateOf<ToolType?>(null) }
+    var routeBackStack by rememberSaveable { mutableStateOf(listOf(Route.Chat)) }
+    var showExitConfirm by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val appContainer = remember(context) { AppContainer(context) }
     val settings by appContainer.settingsStore.settings.collectAsState(initial = AppSettings())
     val strings = appStringsFor(settings.languageTag)
+    val isEnglish = strings.languageTag.startsWith("en")
+
+    fun navigateTo(route: Route, toolType: ToolType? = null) {
+        selectedTool = toolType
+        selectedRoute = route
+        if (routeBackStack.lastOrNull() != route) {
+            routeBackStack = routeBackStack + route
+        }
+    }
+
+    fun navigateBackOneLevel() {
+        selectedTool = null
+        val newStack = if (routeBackStack.size > 1) {
+            routeBackStack.dropLast(1)
+        } else {
+            listOf(Route.Chat)
+        }
+        routeBackStack = newStack
+        selectedRoute = newStack.lastOrNull() ?: Route.Chat
+    }
 
     LaunchedEffect(Unit) {
         appContainer.deviceDiagnosticsLogger.logSnapshot("app_start")
@@ -54,6 +81,45 @@ fun SurvivalApp() {
     }
 
     CompositionLocalProvider(LocalAppStrings provides strings) {
+        BackHandler {
+            if (selectedRoute == Route.Chat) {
+                showExitConfirm = true
+            } else {
+                navigateBackOneLevel()
+            }
+        }
+
+        if (showExitConfirm) {
+            AlertDialog(
+                onDismissRequest = { showExitConfirm = false },
+                title = { Text(if (isEnglish) "Exit app?" else "退出应用？") },
+                text = {
+                    Text(
+                        if (isEnglish) {
+                            "Do you want to close Offline Lifeline?"
+                        } else {
+                            "确定要退出 Offline Lifeline 吗？"
+                        }
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showExitConfirm = false
+                            (context as? Activity)?.finish()
+                        }
+                    ) {
+                        Text(strings.exit)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitConfirm = false }) {
+                        Text(strings.cancel)
+                    }
+                }
+            )
+        }
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.surface,
@@ -61,8 +127,7 @@ fun SurvivalApp() {
                 SurvivalBottomBar(
                     selectedRoute = selectedRoute,
                     onRouteSelected = {
-                        selectedTool = null
-                        selectedRoute = it
+                        navigateTo(it)
                     }
                 )
             }
@@ -71,8 +136,7 @@ fun SurvivalApp() {
                 selectedRoute = selectedRoute,
                 selectedTool = selectedTool,
                 onToolSelected = { toolType ->
-                    selectedTool = toolType
-                    selectedRoute = toolType.toRoute()
+                    navigateTo(toolType.toRoute(), toolType)
                 },
                 appContainer = appContainer,
                 modifier = Modifier

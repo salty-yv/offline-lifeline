@@ -1,5 +1,6 @@
 package com.example.offlinelifeline.ui.emergencycard
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +54,9 @@ fun EmergencyCardScreen(
     var isEditing by rememberSaveable { mutableStateOf(false) }
     val strings = LocalAppStrings.current
     val labels = emergencyCardLabelsFor(strings.languageTag)
+    BackHandler(enabled = isEditing) {
+        isEditing = false
+    }
 
     if (isEditing) {
         EmergencyCardEditor(

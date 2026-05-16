@@ -3,6 +3,7 @@ package com.example.offlinelifeline.ui.chat
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -76,7 +76,7 @@ fun ChatInputBar(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(96.dp)
+                        .height(76.dp)
                 ) {
                     items(
                         items = pendingImages,
@@ -208,37 +208,56 @@ private fun PendingImagePreview(
     image: Attachment.Image,
     onRemove: () -> Unit
 ) {
-    val strings = LocalAppStrings.current
     val bitmap = remember(image.localPath) {
         BitmapFactory.decodeFile(image.localPath)
     }
 
-    Card(
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Box(modifier = Modifier.size(76.dp)) {
+        Card(
+            modifier = Modifier
+                .size(68.dp)
+                .align(Alignment.BottomStart),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
         ) {
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
-                    contentDescription = strings.pendingImageContentDescription,
-                    modifier = Modifier.size(58.dp),
+                    contentDescription = LocalAppStrings.current.pendingImageContentDescription,
+                    modifier = Modifier.size(68.dp),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Text(
-                    text = strings.image,
-                    modifier = Modifier.size(58.dp),
+                    text = LocalAppStrings.current.image,
+                    modifier = Modifier
+                        .size(68.dp)
+                        .padding(12.dp),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            TextButton(onClick = onRemove) {
-                Text(strings.delete)
+        }
+        Surface(
+            modifier = Modifier
+                .size(24.dp)
+                .align(Alignment.TopEnd),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            onClick = onRemove
+        ) {
+            Row(
+                modifier = Modifier.size(24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close_24),
+                    contentDescription = LocalAppStrings.current.delete,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

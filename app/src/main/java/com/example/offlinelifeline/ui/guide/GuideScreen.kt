@@ -1,5 +1,6 @@
 package com.example.offlinelifeline.ui.guide
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -48,6 +49,9 @@ fun GuideScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val selectedGuide = uiState.selectedGuide?.localizedFor(strings.languageTag)
+    BackHandler(enabled = selectedGuide != null) {
+        viewModel.closeDetail()
+    }
 
     if (selectedGuide != null) {
         GuideDetailScreen(

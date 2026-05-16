@@ -3,6 +3,7 @@ package com.example.offlinelifeline.ui.toolbox
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -86,6 +87,17 @@ fun ToolboxScreen(
             ToolType.OFFLINE_GUIDE,
             null -> Unit
         }
+    }
+
+    BackHandler(enabled = showScreenSos) {
+        showScreenSos = false
+    }
+
+    BackHandler(enabled = panel != ToolboxPanel.Home) {
+        if (panel == ToolboxPanel.Flashlight) {
+            viewModel.stopSosFlash()
+        }
+        panel = ToolboxPanel.Home
     }
 
     when (panel) {
