@@ -10,9 +10,8 @@ package com.example.offlinelifeline.inference
  * HuggingFace 的 resolve 端点会自动重定向到 CDN，支持 Range 请求断点续传。
  *
  * ## 注意
- * expectedSha256 / expectedSizeBytes 暂时留空，
- * [ModelIntegrityChecker] 在字段为空/0 时会跳过校验直接放行。
- * 正式发布前请填入实际值。
+ * expectedSha256 / expectedSizeBytes 来自 Hugging Face raw pointer，
+ * 用于下载完成后做本地完整性校验。
  */
 object ModelCatalog {
 
@@ -22,8 +21,8 @@ object ModelCatalog {
         modelVersion = "1.0",
         // 实际文件名（来自 HF 仓库文件列表）
         fileName = "gemma-4-E2B-it.litertlm",
-        expectedSha256 = "",       // TODO: 填入实际 SHA-256
-        expectedSizeBytes = 0L,    // TODO: 填入实际字节数（实测约 2.59 GB）
+        expectedSha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+        expectedSizeBytes = 2_588_147_712L,
         // HuggingFace CDN 直链，公开仓库无需 Token，支持 Range 断点续传
         downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
@@ -36,8 +35,8 @@ object ModelCatalog {
         modelVersion = "1.0",
         // 实际文件名（来自 HF 仓库文件列表）
         fileName = "gemma-4-E4B-it.litertlm",
-        expectedSha256 = "",       // TODO: 填入实际 SHA-256
-        expectedSizeBytes = 0L,    // TODO: 填入实际字节数（实测约 3.66 GB）
+        expectedSha256 = "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+        expectedSizeBytes = 3_659_530_240L,
         // HuggingFace CDN 直链，公开仓库无需 Token，支持 Range 断点续传
         downloadUrl = "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
         fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm"

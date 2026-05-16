@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit
 
 class ModelDownloadRepository(
     private val context: Context,
-    private val integrityChecker: ModelIntegrityChecker = ModelIntegrityChecker()
+    private val integrityChecker: ModelIntegrityChecker = ModelIntegrityChecker(),
+    private val onStateChanged: suspend (String, ModelDownloadState) -> Unit = { _, _ -> }
 ) {
     private val stateFlows = mutableMapOf<String, MutableStateFlow<ModelDownloadState>>()
     private val cancelledDownloads = mutableSetOf<String>()
@@ -46,11 +47,15 @@ class ModelDownloadRepository(
         return getOrCreateStateFlow(modelId).asStateFlow()
     }
 
+    fun setDownloadState(modelId: String, state: ModelDownloadState) {
+        getOrCreateStateFlow(modelId).value = state
+    }
+
     suspend fun startDownload(manifest: ModelManifest) {
         val stateFlow = getOrCreateStateFlow(manifest.modelId)
         val mutex = downloadMutexFor(manifest.modelId)
         if (mutex.isLocked) {
-            stateFlow.value = ModelDownloadState.Queued
+            emitState(manifest.modelId, stateFlow, ModelDownloadState.Queued)
         }
         mutex.withLock {
             synchronized(cancelledDownloads) {
@@ -67,19 +72,27 @@ class ModelDownloadRepository(
         val tmpFile = File(modelDir, "${manifest.fileName}.tmp")
 
         if (targetFile.exists()) {
-            stateFlow.value = ModelDownloadState.Downloading(
-                downloadedBytes = targetFile.length(),
-                totalBytes = targetFile.length(),
-                progressFraction = 1f
+            emitState(
+                manifest.modelId,
+                stateFlow,
+                ModelDownloadState.Downloading(
+                    downloadedBytes = targetFile.length(),
+                    totalBytes = targetFile.length(),
+                    progressFraction = 1f
+                )
             )
             verifyAndEmit(stateFlow, targetFile, manifest)
             return
         }
 
-        stateFlow.value = ModelDownloadState.Downloading(
-            downloadedBytes = tmpFile.length(),
-            totalBytes = -1L,
-            progressFraction = -1f
+        emitState(
+            manifest.modelId,
+            stateFlow,
+            ModelDownloadState.Downloading(
+                downloadedBytes = tmpFile.length(),
+                totalBytes = -1L,
+                progressFraction = -1f
+            )
         )
 
         withContext(Dispatchers.IO) {
@@ -88,32 +101,68 @@ class ModelDownloadRepository(
 
                 moveIntoPlace(tmpFile, targetFile)
                 if (!targetFile.exists()) {
-                    stateFlow.value = ModelDownloadState.Failed("Downloaded model file was not created")
+                    emitState(
+                        manifest.modelId,
+                        stateFlow,
+                        ModelDownloadState.Failed("Downloaded model file was not created")
+                    )
                     return@withContext
                 }
 
                 verifyAndEmit(stateFlow, targetFile, manifest)
             } catch (e: CancellationException) {
-                stateFlow.value = if (wasCancelledByUser(manifest.modelId)) {
-                    ModelDownloadState.Idle
-                } else {
-                    ModelDownloadState.Paused
-                }
+                synchronized(activeCalls) {
+                    activeCalls.remove(manifest.modelId)
+                }?.cancel()
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    if (wasCancelledByUser(manifest.modelId)) {
+                        ModelDownloadState.Idle
+                    } else {
+                        ModelDownloadState.Paused
+                    }
+                )
                 throw e
             } catch (e: UnknownHostException) {
-                stateFlow.value = ModelDownloadState.Failed("Cannot connect to the model download server")
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    ModelDownloadState.Failed("Cannot connect to the model download server")
+                )
             } catch (e: SocketTimeoutException) {
-                stateFlow.value = ModelDownloadState.Failed("Connection timed out while downloading the model")
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    ModelDownloadState.Failed("Connection timed out while downloading the model")
+                )
             } catch (e: IOException) {
-                stateFlow.value = if (wasCancelledByUser(manifest.modelId)) {
-                    ModelDownloadState.Idle
-                } else {
-                    ModelDownloadState.Failed(e.message ?: "Network error while downloading the model")
-                }
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    if (wasCancelledByUser(manifest.modelId)) {
+                        ModelDownloadState.Idle
+                    } else {
+                        ModelDownloadState.Failed(e.message ?: "Network error while downloading the model")
+                    }
+                )
             } catch (e: Exception) {
-                stateFlow.value = ModelDownloadState.Failed(e.message ?: "Unknown model download error")
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    ModelDownloadState.Failed(e.message ?: "Unknown model download error")
+                )
             }
         }
+    }
+
+    private suspend fun emitState(
+        modelId: String,
+        stateFlow: MutableStateFlow<ModelDownloadState>,
+        state: ModelDownloadState
+    ) {
+        stateFlow.value = state
+        onStateChanged(modelId, state)
     }
 
     fun pauseDownload(modelId: String) {
@@ -215,47 +264,51 @@ class ModelDownloadRepository(
 
         try {
             call.execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code}: ${response.message}")
-            }
+                if (!response.isSuccessful) {
+                    throw IOException("HTTP ${response.code}: ${response.message}")
+                }
 
-            val appending = resumeOffset > 0 && response.code == HTTP_PARTIAL_CONTENT
-            if (resumeOffset > 0 && !appending) {
-                tmpFile.delete()
-                resumeOffset = 0L
-            }
+                val appending = resumeOffset > 0 && response.code == HTTP_PARTIAL_CONTENT
+                if (resumeOffset > 0 && !appending) {
+                    tmpFile.delete()
+                    resumeOffset = 0L
+                }
 
-            val contentLength = response.header("Content-Length")?.toLongOrNull() ?: -1L
-            val totalBytes = when {
-                appending && contentLength > 0 -> resumeOffset + contentLength
-                contentLength > 0 -> contentLength
-                else -> -1L
-            }
-            val body = response.body ?: throw IOException("Empty response body")
+                val contentLength = response.header("Content-Length")?.toLongOrNull() ?: -1L
+                val totalBytes = when {
+                    appending && contentLength > 0 -> resumeOffset + contentLength
+                    contentLength > 0 -> contentLength
+                    else -> -1L
+                }
+                val body = response.body ?: throw IOException("Empty response body")
 
-            FileOutputStream(tmpFile, appending).use { out ->
-                body.byteStream().use { inputStream ->
-                    val buffer = ByteArray(BUFFER_SIZE_BYTES)
-                    var downloadedBytes = resumeOffset
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val read = inputStream.read(buffer)
-                        if (read == -1) break
-                        out.write(buffer, 0, read)
-                        downloadedBytes += read
-                        val fraction = if (totalBytes > 0) {
-                            (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-                        } else {
-                            -1f
+                FileOutputStream(tmpFile, appending).use { out ->
+                    body.byteStream().use { inputStream ->
+                        val buffer = ByteArray(BUFFER_SIZE_BYTES)
+                        var downloadedBytes = resumeOffset
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = inputStream.read(buffer)
+                            if (read == -1) break
+                            out.write(buffer, 0, read)
+                            downloadedBytes += read
+                            val fraction = if (totalBytes > 0) {
+                                (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                            } else {
+                                -1f
+                            }
+                            emitState(
+                                modelId,
+                                stateFlow,
+                                ModelDownloadState.Downloading(
+                                    downloadedBytes = downloadedBytes,
+                                    totalBytes = totalBytes,
+                                    progressFraction = fraction
+                                )
+                            )
                         }
-                        stateFlow.value = ModelDownloadState.Downloading(
-                            downloadedBytes = downloadedBytes,
-                            totalBytes = totalBytes,
-                            progressFraction = fraction
-                        )
                     }
                 }
-            }
             }
         } finally {
             synchronized(activeCalls) {
@@ -274,12 +327,16 @@ class ModelDownloadRepository(
         val result = integrityChecker.verifyFile(file, manifest)
         when (result) {
             is ModelIntegrityResult.Valid -> {
-                stateFlow.value = ModelDownloadState.Completed(manifest)
+                emitState(manifest.modelId, stateFlow, ModelDownloadState.Completed(manifest))
             }
 
             else -> {
                 file.delete()
-                stateFlow.value = ModelDownloadState.Failed("Model integrity check failed: $result")
+                emitState(
+                    manifest.modelId,
+                    stateFlow,
+                    ModelDownloadState.Failed("Model integrity check failed: $result")
+                )
             }
         }
     }

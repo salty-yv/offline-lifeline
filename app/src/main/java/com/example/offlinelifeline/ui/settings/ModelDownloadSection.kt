@@ -48,6 +48,7 @@ data class ModelManagementStrings(
     val approx4Gb: String,
     val approxPrefix: String,
     val connecting: String,
+    val checkingModel: String,
     val downloadedSuffix: String
 ) {
     companion object {
@@ -74,6 +75,7 @@ data class ModelManagementStrings(
             approx4Gb = "约 4 GB",
             approxPrefix = "约 ",
             connecting = "正在连接...",
+            checkingModel = "正在校验模型...",
             downloadedSuffix = " 已下载"
         )
 
@@ -96,6 +98,7 @@ data class ModelManagementStrings(
             approx4Gb = "About 4 GB",
             approxPrefix = "About ",
             connecting = "Connecting...",
+            checkingModel = "Checking model...",
             downloadedSuffix = " downloaded"
         )
     }
@@ -113,6 +116,7 @@ fun ModelRowWithState(
     onSwitch: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isChecking = modelAvailability?.runtimeState == ModelRuntimeState.Checking
     val isLocalAvailable = downloadState is ModelDownloadState.Completed ||
         modelAvailability?.runtimeState == ModelRuntimeState.ReadyToLoad
 
@@ -157,7 +161,14 @@ fun ModelRowWithState(
             }
         }
 
-        when (downloadState) {
+        if (isChecking) {
+            Text(
+                text = strings.checkingModel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        } else when (downloadState) {
             is ModelDownloadState.Idle, is ModelDownloadState.Failed -> {
                 if (isLocalAvailable) {
                     LocalModelSwitchContent(

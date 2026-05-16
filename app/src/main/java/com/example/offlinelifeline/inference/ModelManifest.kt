@@ -18,8 +18,8 @@ data class ModelManifest(
             modelName = "Gemma-4-E2B-it-litert-lm",
             modelVersion = "development-placeholder",
             fileName = "gemma-4-E2B-it.litertlm",
-            expectedSha256 = "",
-            expectedSizeBytes = 0L,
+            expectedSha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+            expectedSizeBytes = 2_588_147_712L,
             downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
             fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
             alternateFileNames = listOf("gemma-4-E2B-it-litert-lm.litertlm")
