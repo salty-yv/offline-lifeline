@@ -81,7 +81,10 @@ class SettingsViewModel(
 
         val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(
-                workDataOf(ModelDownloadWorker.KEY_MODEL_ID to manifest.modelId)
+                workDataOf(
+                    ModelDownloadWorker.KEY_MODEL_ID to manifest.modelId,
+                    ModelDownloadWorker.KEY_PREFER_MIRROR to shouldPreferMirror()
+                )
             )
             .setConstraints(
                 Constraints.Builder()
@@ -96,6 +99,10 @@ class SettingsViewModel(
             ExistingWorkPolicy.REPLACE,
             request
         )
+    }
+
+    private fun shouldPreferMirror(): Boolean {
+        return !settings.value.languageTag.startsWith("en", ignoreCase = true)
     }
 
     fun cancelDownload(manifest: ModelManifest) {

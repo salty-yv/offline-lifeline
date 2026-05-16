@@ -29,6 +29,7 @@ class ModelDownloadWorker(
 
         val manifest = ModelCatalog.findById(modelId)
             ?: return Result.failure()
+        val preferMirror = inputData.getBoolean(KEY_PREFER_MIRROR, false)
 
         return try {
             val repository = ModelDownloadRepository(
@@ -38,7 +39,7 @@ class ModelDownloadWorker(
                     setProgress(progressDataFor(state))
                 }
             )
-            repository.startDownload(manifest)
+            repository.startDownload(manifest, preferMirror = preferMirror)
 
             val state = repository.getDownloadState(modelId).value
             if (state is ModelDownloadState.Completed) {
@@ -56,6 +57,7 @@ class ModelDownloadWorker(
 
     companion object {
         const val KEY_MODEL_ID = "model_id"
+        const val KEY_PREFER_MIRROR = "prefer_mirror"
         const val KEY_STATE = "state"
         const val KEY_DOWNLOADED_BYTES = "downloaded_bytes"
         const val KEY_TOTAL_BYTES = "total_bytes"

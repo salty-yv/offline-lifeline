@@ -38,7 +38,7 @@ class ModelDownloadRepository(
     private val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(0, TimeUnit.SECONDS)
             .build()
     }
@@ -51,7 +51,10 @@ class ModelDownloadRepository(
         getOrCreateStateFlow(modelId).value = state
     }
 
-    suspend fun startDownload(manifest: ModelManifest) {
+    suspend fun startDownload(
+        manifest: ModelManifest,
+        preferMirror: Boolean = false
+    ) {
         val stateFlow = getOrCreateStateFlow(manifest.modelId)
         val mutex = downloadMutexFor(manifest.modelId)
         if (mutex.isLocked) {
@@ -61,11 +64,14 @@ class ModelDownloadRepository(
             synchronized(cancelledDownloads) {
                 cancelledDownloads.remove(manifest.modelId)
             }
-            startDownloadLocked(manifest)
+            startDownloadLocked(manifest, preferMirror)
         }
     }
 
-    private suspend fun startDownloadLocked(manifest: ModelManifest) {
+    private suspend fun startDownloadLocked(
+        manifest: ModelManifest,
+        preferMirror: Boolean
+    ) {
         val stateFlow = getOrCreateStateFlow(manifest.modelId)
         val modelDir = getModelDir()
         val targetFile = File(modelDir, manifest.fileName)
@@ -97,7 +103,7 @@ class ModelDownloadRepository(
 
         withContext(Dispatchers.IO) {
             try {
-                downloadFromAvailableUrl(manifest, stateFlow, tmpFile)
+                downloadFromAvailableUrl(manifest, stateFlow, tmpFile, preferMirror)
 
                 moveIntoPlace(tmpFile, targetFile)
                 if (!targetFile.exists()) {
@@ -213,17 +219,26 @@ class ModelDownloadRepository(
         }
     }
 
-    private fun downloadUrls(manifest: ModelManifest): List<String> {
-        return listOfNotNull(manifest.downloadUrl, manifest.fallbackUrl).distinct()
+    private fun downloadUrls(
+        manifest: ModelManifest,
+        preferMirror: Boolean
+    ): List<String> {
+        val primaryUrls = if (preferMirror) {
+            listOfNotNull(manifest.fallbackUrl, manifest.downloadUrl)
+        } else {
+            listOfNotNull(manifest.downloadUrl, manifest.fallbackUrl)
+        }
+        return primaryUrls.distinct()
     }
 
     private suspend fun downloadFromAvailableUrl(
         manifest: ModelManifest,
         stateFlow: MutableStateFlow<ModelDownloadState>,
-        tmpFile: File
+        tmpFile: File,
+        preferMirror: Boolean
     ) {
         var lastFailure: Exception? = null
-        for (url in downloadUrls(manifest)) {
+        for (url in downloadUrls(manifest, preferMirror)) {
             currentCoroutineContext().ensureActive()
             try {
                 downloadFromUrl(manifest.modelId, url, stateFlow, tmpFile)
