@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -33,17 +35,21 @@ class LiteRtLmEngine(
     private var loadedModelId: String? = null
     private var stopRequested = false
     private var imageInputEnabled = false
+    private val engineMutex = Mutex()
 
     override val supportsImageInput: Boolean
         get() = imageInputEnabled
 
-    override suspend fun initialize(): Result<Unit> {
-        val manifest = manifestProvider()
+    override suspend fun initialize(): Result<Unit> = engineMutex.withLock {
+        initializeLocked(manifestProvider())
+    }
+
+    private suspend fun initializeLocked(manifest: ModelManifest): Result<Unit> {
         if (_runtimeState.value == ModelRuntimeState.Ready && loadedModelId == manifest.modelId) {
             return Result.success(Unit)
         }
         if (engine != null && loadedModelId != manifest.modelId) {
-            release()
+            releaseLocked()
         }
 
         val startedAt = SystemClock.elapsedRealtime()
@@ -59,20 +65,28 @@ class LiteRtLmEngine(
                 ?: error("Model path is unavailable.")
 
             _runtimeState.value = ModelRuntimeState.Loading
-            debugLogger.info(TAG, "litertlm_initialize_start modelPath=$modelPath backend=CPU visionBackend=GPU")
+            debugLogger.info(
+                TAG,
+                "litertlm_initialize_start modelPath=$modelPath backend=CPU supportsImageInput=${manifest.supportsImageInput}"
+            )
 
             withContext(dispatchers.io) {
                 Engine.setNativeMinLogSeverity(LogSeverity.ERROR)
-                val createdEngine = runCatching {
-                    createEngine(modelPath = modelPath, enableVision = true)
-                }.onSuccess {
-                    imageInputEnabled = true
-                    debugLogger.info(TAG, "litertlm_vision_backend_enabled backend=GPU maxNumImages=$MAX_IMAGES")
-                }.getOrElse { visionThrowable ->
-                    debugLogger.warning(
-                        TAG,
-                        "litertlm_vision_backend_failed_retrying_text_only reason=${visionThrowable.message}. Check model accelerator allowlist for visionAccelerator=gpu."
-                    )
+                val createdEngine = if (manifest.supportsImageInput) {
+                    runCatching {
+                        createEngine(modelPath = modelPath, enableVision = true)
+                    }.onSuccess {
+                        imageInputEnabled = true
+                        debugLogger.info(TAG, "litertlm_vision_backend_enabled backend=GPU maxNumImages=$MAX_IMAGES")
+                    }.getOrElse { visionThrowable ->
+                        debugLogger.warning(
+                            TAG,
+                            "litertlm_vision_backend_failed_retrying_text_only reason=${visionThrowable.message}. Check model accelerator allowlist for visionAccelerator=gpu."
+                        )
+                        imageInputEnabled = false
+                        createEngine(modelPath = modelPath, enableVision = false)
+                    }
+                } else {
                     imageInputEnabled = false
                     createEngine(modelPath = modelPath, enableVision = false)
                 }
@@ -93,68 +107,73 @@ class LiteRtLmEngine(
                 "litertlm_initialize_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}",
                 throwable
             )
-            release()
+            releaseLocked()
         }
     }
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
-        val activeConversation = conversation ?: error("LiteRT-LM conversation is not initialized")
-        stopRequested = false
-        _runtimeState.value = ModelRuntimeState.Generating
-
-        val prompt = buildPrompt(request)
-        val startedAt = SystemClock.elapsedRealtime()
-        var firstTokenLatencyMs: Long? = null
-        var chunkCount = 0
-        var outputChars = 0
-
-        try {
-            val contents = buildContents(request, prompt)
-            debugLogger.info(
-                TAG,
-                "litertlm_generation_start promptChars=${prompt.length} imageCount=${request.imagePaths.size} supportsImageInput=$supportsImageInput multimodal=${contents != null}"
-            )
-            val outputFlow = if (contents != null) {
-                activeConversation.sendMessageAsync(contents)
-            } else {
-                activeConversation.sendMessageAsync(prompt)
+        engineMutex.withLock {
+            if (_runtimeState.value != ModelRuntimeState.Ready || conversation == null) {
+                initializeLocked(manifestProvider()).getOrThrow()
             }
-            outputFlow.collect { message ->
-                if (stopRequested) throw CancellationException("LiteRT-LM generation stopped")
+            val activeConversation = conversation ?: error("LiteRT-LM conversation is not initialized")
+            stopRequested = false
+            _runtimeState.value = ModelRuntimeState.Generating
 
-                val text = message.toString()
-                if (firstTokenLatencyMs == null && text.isNotEmpty()) {
-                    firstTokenLatencyMs = SystemClock.elapsedRealtime() - startedAt
-                    debugLogger.info(TAG, "litertlm_first_token latencyMs=$firstTokenLatencyMs")
-                }
-                chunkCount += 1
-                outputChars += text.length
-                emit(InferenceChunk(text = text, isFinal = false))
-            }
+            val prompt = buildPrompt(request)
+            val startedAt = SystemClock.elapsedRealtime()
+            var firstTokenLatencyMs: Long? = null
+            var chunkCount = 0
+            var outputChars = 0
 
-            emit(InferenceChunk(text = "", isFinal = true))
-            _runtimeState.value = ModelRuntimeState.Ready
-            debugLogger.info(
-                TAG,
-                "litertlm_generation_success totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
-            )
-        } catch (throwable: Throwable) {
-            if (throwable is CancellationException) {
-                _runtimeState.value = ModelRuntimeState.Ready
-                debugLogger.warning(
+            try {
+                val contents = buildContents(request, prompt)
+                debugLogger.info(
                     TAG,
-                    "litertlm_generation_interrupted totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
+                    "litertlm_generation_start promptChars=${prompt.length} imageCount=${request.imagePaths.size} supportsImageInput=$supportsImageInput multimodal=${contents != null}"
+                )
+                val outputFlow = if (contents != null) {
+                    activeConversation.sendMessageAsync(contents)
+                } else {
+                    activeConversation.sendMessageAsync(prompt)
+                }
+                outputFlow.collect { message ->
+                    if (stopRequested) throw CancellationException("LiteRT-LM generation stopped")
+
+                    val text = message.toString()
+                    if (firstTokenLatencyMs == null && text.isNotEmpty()) {
+                        firstTokenLatencyMs = SystemClock.elapsedRealtime() - startedAt
+                        debugLogger.info(TAG, "litertlm_first_token latencyMs=$firstTokenLatencyMs")
+                    }
+                    chunkCount += 1
+                    outputChars += text.length
+                    emit(InferenceChunk(text = text, isFinal = false))
+                }
+
+                emit(InferenceChunk(text = "", isFinal = true))
+                _runtimeState.value = ModelRuntimeState.Ready
+                debugLogger.info(
+                    TAG,
+                    "litertlm_generation_success totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
+                )
+            } catch (throwable: Throwable) {
+                if (throwable is CancellationException) {
+                    _runtimeState.value = ModelRuntimeState.Ready
+                    debugLogger.warning(
+                        TAG,
+                        "litertlm_generation_interrupted totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars"
+                    )
+                    throw throwable
+                }
+
+                _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM generation failed")
+                debugLogger.error(
+                    TAG,
+                    "litertlm_generation_failed totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars",
+                    throwable
                 )
                 throw throwable
             }
-
-            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM generation failed")
-            debugLogger.error(
-                TAG,
-                "litertlm_generation_failed totalElapsedMs=${SystemClock.elapsedRealtime() - startedAt} firstTokenLatencyMs=${firstTokenLatencyMs ?: -1} chunks=$chunkCount outputChars=$outputChars",
-                throwable
-            )
-            throw throwable
         }
     }
 
@@ -165,24 +184,32 @@ class LiteRtLmEngine(
     }
 
     override suspend fun resetConversation() {
-        val startedAt = SystemClock.elapsedRealtime()
-        stopGeneration()
-        conversation?.close()
-        conversation = withContext(dispatchers.io) {
-            engine?.createConversation()
+        engineMutex.withLock {
+            val startedAt = SystemClock.elapsedRealtime()
+            stopRequested = true
+            conversation?.close()
+            conversation = withContext(dispatchers.io) {
+                engine?.createConversation()
+            }
+            _runtimeState.value = if (conversation == null) {
+                ModelRuntimeState.Released
+            } else {
+                ModelRuntimeState.Ready
+            }
+            debugLogger.info(
+                TAG,
+                "litertlm_conversation_reset elapsedMs=${SystemClock.elapsedRealtime() - startedAt} state=${_runtimeState.value::class.simpleName}"
+            )
         }
-        _runtimeState.value = if (conversation == null) {
-            ModelRuntimeState.Released
-        } else {
-            ModelRuntimeState.Ready
-        }
-        debugLogger.info(
-            TAG,
-            "litertlm_conversation_reset elapsedMs=${SystemClock.elapsedRealtime() - startedAt} state=${_runtimeState.value::class.simpleName}"
-        )
     }
 
     override suspend fun release() {
+        engineMutex.withLock {
+            releaseLocked()
+        }
+    }
+
+    private suspend fun releaseLocked() {
         val startedAt = SystemClock.elapsedRealtime()
         _runtimeState.value = ModelRuntimeState.Releasing
         runCatching {
@@ -240,7 +267,14 @@ class LiteRtLmEngine(
             maxNumImages = if (enableVision) MAX_IMAGES else null,
             cacheDir = modelAssetManager.cacheDirPath
         )
-        return Engine(config).also { it.initialize() }
+        val createdEngine = Engine(config)
+        return try {
+            createdEngine.initialize()
+            createdEngine
+        } catch (throwable: Throwable) {
+            runCatching { createdEngine.close() }
+            throw throwable
+        }
     }
 
     private companion object {

@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class FallbackLlmEngine(
     private val primary: LocalLlmEngine,
@@ -15,15 +17,16 @@ class FallbackLlmEngine(
     override val runtimeState: StateFlow<ModelRuntimeState> = _runtimeState
 
     private var activeEngine: LocalLlmEngine = primary
+    private val initializeMutex = Mutex()
     override val supportsImageInput: Boolean
         get() = activeEngine.supportsImageInput
 
-    override suspend fun initialize(): Result<Unit> {
+    override suspend fun initialize(): Result<Unit> = initializeMutex.withLock {
         val primaryResult = primary.initialize()
         if (primaryResult.isSuccess) {
             activeEngine = primary
             _runtimeState.value = ModelRuntimeState.Ready
-            return primaryResult
+            return@withLock primaryResult
         }
 
         val primaryState = primary.runtimeState.value
@@ -31,8 +34,8 @@ class FallbackLlmEngine(
         val fallbackResult = fallback.initialize()
         if (fallbackResult.isSuccess) {
             activeEngine = fallback
-            _runtimeState.value = primaryState
-            return Result.success(Unit)
+            _runtimeState.value = ModelRuntimeState.Ready
+            return@withLock Result.success(Unit)
         }
 
         _runtimeState.value = ModelRuntimeState.Failed(
@@ -40,10 +43,13 @@ class FallbackLlmEngine(
                 ?: primaryResult.exceptionOrNull()?.message
                 ?: "模型初始化失败"
         )
-        return fallbackResult
+        return@withLock fallbackResult
     }
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
+        if (activeEngine.runtimeState.value != ModelRuntimeState.Ready) {
+            initialize().getOrThrow()
+        }
         activeEngine.sendMessage(request).collect { chunk ->
             emit(chunk)
         }

@@ -72,6 +72,14 @@ class ChatViewModel(
                 _uiState.update { it.copy(chatTextSizeSp = settings.chatTextSizeSp) }
                 if (activeModelId != settings.activeModelId) {
                     activeModelId = settings.activeModelId
+                    generationJob?.cancel()
+                    generationJob = null
+                    _uiState.update {
+                        it.copy(
+                            isGenerating = false,
+                            errorMessage = null
+                        )
+                    }
                     modelRefreshJob?.cancel()
                     modelRefreshJob = launch {
                         refreshSelectedModel(settings.activeModelId)

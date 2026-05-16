@@ -10,7 +10,8 @@ data class ModelManifest(
     val downloadUrl: String,           // 首选下载链接 (ModelScope)
     val fallbackUrl: String? = null,   // 备用下载链接
     val format: String = "litertlm",
-    val alternateFileNames: List<String> = emptyList()
+    val alternateFileNames: List<String> = emptyList(),
+    val supportsImageInput: Boolean = false
 ) {
     companion object {
         val Default = ModelManifest(
