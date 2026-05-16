@@ -1,15 +1,20 @@
 package com.example.offlinelifeline.ui.guide
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AssistChip
@@ -19,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.data.db.GuideEntity
+import com.example.offlinelifeline.ui.components.LifelineCard
+import com.example.offlinelifeline.ui.components.LifelineTopBar
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 
 @Composable
@@ -89,14 +97,24 @@ private fun GuideListScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
+        LifelineTopBar(title = strings.routeGuide)
         OutlinedTextField(
             value = uiState.query,
             onValueChange = onQueryChanged,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             singleLine = true,
-            label = { Text(strings.searchGuides) }
+            placeholder = { Text(strings.searchGuides) },
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                focusedBorderColor = MaterialTheme.colorScheme.surfaceContainer,
+                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
+            )
         )
 
         when {
@@ -113,17 +131,25 @@ private fun GuideListScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(
-                    items = visibleGuides,
-                    key = { it.id }
-                ) { guide ->
-                    GuideListItem(
-                        guide = guide,
-                        onClick = { onGuideSelected(guide) }
-                    )
+                items(visibleGuides.chunked(2)) { rowGuides ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        rowGuides.forEach { guide ->
+                            GuideListItem(
+                                guide = guide,
+                                onClick = { onGuideSelected(guide) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (rowGuides.size == 1) {
+                            Column(modifier = Modifier.weight(1f)) {}
+                        }
+                    }
                 }
             }
         }
@@ -452,33 +478,41 @@ private fun GuideListItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .height(140.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
                 text = guide.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = guide.summary,
-                modifier = Modifier.padding(top = 6.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             FlowRow(
-                modifier = Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 guide.tags.split(",")
                     .map { it.trim() }
                     .filter { it.isNotBlank() }
-                    .take(3)
+                    .take(1)
                     .forEach { tag ->
                         AssistChip(
                             onClick = onClick,
@@ -507,31 +541,34 @@ private fun GuideDetailScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 12.dp)
+            .background(MaterialTheme.colorScheme.surface),
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
-            Button(onClick = onBack) {
-                Text(strings.backToList)
-            }
+            LifelineTopBar(
+                title = guide.title,
+                navigationIcon = Icons.Default.ArrowBack,
+                navigationContentDescription = strings.backToList,
+                onNavigationClick = onBack
+            )
         }
 
         item {
-            Text(
-                text = guide.title,
-                modifier = Modifier.padding(top = 16.dp),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = guide.summary,
-                modifier = Modifier.padding(top = 8.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            LifelineCard(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Text(
+                    text = guide.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = guide.summary,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
                 text = guide.body,
-                modifier = Modifier.padding(top = 18.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
                 style = MaterialTheme.typography.bodyLarge
             )
         }

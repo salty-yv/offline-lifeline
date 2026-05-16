@@ -39,9 +39,9 @@ fun ChatMessageBubble(
 ) {
     val isUser = message.role == ChatRole.USER
     val bubbleColor = if (isUser) {
-        MaterialTheme.colorScheme.primaryContainer
+        MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceContainer
     }
     val textColor = if (isUser) {
         MaterialTheme.colorScheme.onPrimaryContainer
@@ -59,7 +59,9 @@ fun ChatMessageBubble(
             modifier = if (isUser) {
                 Modifier.widthIn(max = 340.dp)
             } else {
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
+                    .padding(end = 32.dp)
             },
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
@@ -67,7 +69,7 @@ fun ChatMessageBubble(
                 Surface(
                     color = bubbleColor,
                     contentColor = textColor,
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Text(
                         text = if (message.text.isBlank()) "..." else message.text,
@@ -76,25 +78,31 @@ fun ChatMessageBubble(
                     )
                 }
             } else {
-                Text(
-                    text = if (isWaitingForAssistant) "..." else message.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = if (isWaitingForAssistant) {
-                            (chatTextSizeSp + 10).sp
-                        } else {
-                            chatTextSizeSp.sp
-                        },
-                        lineHeight = if (isWaitingForAssistant) {
-                            (chatTextSizeSp + 12).sp
-                        } else {
-                            (chatTextSizeSp * 1.45f).sp
-                        }
-                    ),
-                    color = textColor
-                )
+                Surface(
+                    color = bubbleColor,
+                    contentColor = textColor,
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text(
+                        text = if (isWaitingForAssistant) "..." else message.text,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = if (isWaitingForAssistant) {
+                                (chatTextSizeSp + 10).sp
+                            } else {
+                                chatTextSizeSp.sp
+                            },
+                            lineHeight = if (isWaitingForAssistant) {
+                                (chatTextSizeSp + 12).sp
+                            } else {
+                                (chatTextSizeSp * 1.45f).sp
+                            }
+                        ),
+                        color = textColor
+                    )
+                }
             }
 
             val imageAttachments = message.attachments.filterIsInstance<Attachment.Image>()

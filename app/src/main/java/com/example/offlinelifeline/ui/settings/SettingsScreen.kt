@@ -1,5 +1,6 @@
 package com.example.offlinelifeline.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.inference.ModelCatalog
+import com.example.offlinelifeline.ui.components.LifelineTopBar
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 import kotlin.math.roundToInt
 
@@ -39,23 +41,20 @@ fun SettingsScreen(
         ModelManagementStrings.forLanguage(strings.languageTag)
     }
 
-    LazyColumn(
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
-        item {
-            Text(
-                text = strings.settingsTitle,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        LifelineTopBar(title = strings.settingsTitle)
 
-        item {
-            Card(
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item {
+                Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -92,16 +91,16 @@ fun SettingsScreen(
             }
         }
 
-        item {
-            ChatTextSizeCard(
-                languageTag = strings.languageTag,
-                chatTextSizeSp = settings.chatTextSizeSp,
-                onChatTextSizeChanged = viewModel::setChatTextSizeSp
-            )
-        }
+            item {
+                ChatTextSizeCard(
+                    languageTag = strings.languageTag,
+                    chatTextSizeSp = settings.chatTextSizeSp,
+                    onChatTextSizeChanged = viewModel::setChatTextSizeSp
+                )
+            }
 
-        item {
-            Card(
+            item {
+                Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -157,6 +156,7 @@ fun SettingsScreen(
             }
         }
     }
+}
 }
 
 @Composable

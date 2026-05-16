@@ -42,15 +42,14 @@ class EmergencyCardViewModel(
         }
     }
 
-    fun updateName(value: String) = update { copy(name = value, message = null) }
-    fun updateBloodType(value: String) = update { copy(bloodType = value, message = null) }
-    fun updateAllergies(value: String) = update { copy(allergies = value, message = null) }
-    fun updateChronicConditions(value: String) = update { copy(chronicConditions = value, message = null) }
-    fun updateMedications(value: String) = update { copy(medications = value, message = null) }
-    fun updateEmergencyContact(value: String) = update { copy(emergencyContact = value, message = null) }
-    fun updateNotes(value: String) = update { copy(notes = value, message = null) }
-    fun updateHideSensitiveFields(value: Boolean) = update { copy(hideSensitiveFields = value, message = null) }
-    fun setRescueView(enabled: Boolean) = update { copy(isRescueView = enabled) }
+    fun updateName(value: String) = update { copy(name = value, isSavedMessageVisible = false) }
+    fun updateBloodType(value: String) = update { copy(bloodType = sanitizeBloodType(value, bloodType), isSavedMessageVisible = false) }
+    fun updateAllergies(value: String) = update { copy(allergies = value, isSavedMessageVisible = false) }
+    fun updateChronicConditions(value: String) = update { copy(chronicConditions = value, isSavedMessageVisible = false) }
+    fun updateMedications(value: String) = update { copy(medications = value, isSavedMessageVisible = false) }
+    fun updateEmergencyContact(value: String) = update { copy(emergencyContact = value, isSavedMessageVisible = false) }
+    fun updateNotes(value: String) = update { copy(notes = sanitizeDateOfBirth(value), isSavedMessageVisible = false) }
+    fun updateHideSensitiveFields(value: Boolean) = update { copy(hideSensitiveFields = value, isSavedMessageVisible = false) }
 
     fun save() {
         val state = _uiState.value
@@ -68,17 +67,45 @@ class EmergencyCardViewModel(
                     updatedAtMillis = timeProvider.nowMillis()
                 )
             )
-            _uiState.update {
-                it.copy(
-                    message = "信息卡已保存在本机",
-                    isRescueView = true
-                )
-            }
+            _uiState.update { it.copy(isSavedMessageVisible = true) }
         }
     }
 
     private fun update(block: EmergencyCardUiState.() -> EmergencyCardUiState) {
         _uiState.update { it.block() }
+    }
+
+    private fun sanitizeDateOfBirth(value: String): String {
+        val digits = value.filter(Char::isDigit).take(8)
+        return buildString {
+            digits.forEachIndexed { index, char ->
+                if (index == 4 || index == 6) append('-')
+                append(char)
+            }
+        }
+    }
+
+    private fun sanitizeBloodType(value: String, previousValue: String): String {
+        val normalized = value
+            .uppercase()
+            .filter { it == 'A' || it == 'B' || it == 'O' || it == '+' || it == '-' }
+            .take(3)
+        val allowedPrefixes = setOf(
+            "",
+            "A",
+            "B",
+            "O",
+            "AB",
+            "A+",
+            "A-",
+            "B+",
+            "B-",
+            "O+",
+            "O-",
+            "AB+",
+            "AB-"
+        )
+        return if (normalized in allowedPrefixes) normalized else previousValue
     }
 
     class Factory(

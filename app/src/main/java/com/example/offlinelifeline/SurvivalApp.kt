@@ -1,10 +1,18 @@
 package com.example.offlinelifeline
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -16,7 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.example.offlinelifeline.core.model.ToolType
 import com.example.offlinelifeline.data.datastore.AppSettings
 import com.example.offlinelifeline.di.AppContainer
@@ -43,6 +56,7 @@ fun SurvivalApp() {
     CompositionLocalProvider(LocalAppStrings provides strings) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.surface,
             bottomBar = {
                 SurvivalBottomBar(
                     selectedRoute = selectedRoute,
@@ -86,14 +100,94 @@ private fun SurvivalBottomBar(
     onRouteSelected: (Route) -> Unit
 ) {
     val strings = LocalAppStrings.current
-    NavigationBar {
-        Route.entries.forEach { route ->
-            NavigationBarItem(
-                selected = selectedRoute == route,
-                onClick = { onRouteSelected(route) },
-                icon = { Text(route.iconLabel(strings)) },
-                label = { Text(route.title(strings)) }
-            )
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(104.dp)
+                .padding(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 18.dp),
+            shape = RoundedCornerShape(40.dp),
+            color = MaterialTheme.colorScheme.outline
+        ) {
+            Surface(
+                modifier = Modifier.padding(1.dp),
+                shape = RoundedCornerShape(39.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Route.entries.forEach { route ->
+                        val selected = selectedRoute == route
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(60.dp),
+                            shape = RoundedCornerShape(30.dp),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainer
+                            },
+                            onClick = { onRouteSelected(route) }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                val contentColor = if (selected) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                                Icon(
+                                    painter = painterResource(route.iconRes()),
+                                    contentDescription = route.title(strings),
+                                    tint = contentColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = route.navLabel(strings),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = contentColor,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+private fun Route.navLabel(strings: com.example.offlinelifeline.ui.i18n.AppStrings): String {
+    return when (this) {
+        Route.Chat -> if (strings.languageTag.startsWith("en")) "CHAT" else strings.routeChat
+        Route.Toolbox -> if (strings.languageTag.startsWith("en")) "TOOLBOX" else strings.routeToolbox
+        Route.Guide -> if (strings.languageTag.startsWith("en")) "GUIDE" else strings.routeGuide
+        Route.EmergencyCard -> if (strings.languageTag.startsWith("en")) "SOS" else strings.routeEmergencyCard
+        Route.Settings -> if (strings.languageTag.startsWith("en")) "SETTINGS" else strings.routeSettings
+    }
+}
+
+private fun Route.iconRes(): Int {
+    return when (this) {
+        Route.Chat -> R.drawable.ic_nav_chat_24
+        Route.Toolbox -> R.drawable.ic_nav_tools_24
+        Route.Guide -> R.drawable.ic_nav_guide_24
+        Route.EmergencyCard -> R.drawable.ic_nav_card_24
+        Route.Settings -> R.drawable.ic_nav_settings_24
     }
 }
