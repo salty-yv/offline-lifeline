@@ -35,6 +35,7 @@ fun AppNavHost(
                     llmEngine = appContainer.localLlmEngine,
                     survivalAgent = appContainer.survivalAgent,
                     modelAssetManager = appContainer.modelAssetManager,
+                    modelDownloadRepository = appContainer.modelDownloadRepository,
                     imagePreprocessor = appContainer.imagePreprocessor,
                     settingsStore = appContainer.settingsStore
                 )

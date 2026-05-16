@@ -4,9 +4,12 @@ import com.example.offlinelifeline.core.model.ModelRuntimeState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,6 +36,26 @@ class FallbackLlmEngineTest {
         val result = engine.initialize()
 
         assertTrue(result.isSuccess)
+        assertEquals(ModelRuntimeState.Ready, engine.runtimeState.value)
+    }
+
+    @Test
+    fun fallbackSuccessDoesNotExposeFailedState() = runBlocking {
+        val primary = InitializingFakeEngine(shouldFailInitialization = true)
+        val fallback = InitializingFakeEngine()
+        val engine = FallbackLlmEngine(primary, fallback)
+        val observedStates = mutableListOf<ModelRuntimeState>()
+        val collectJob = launch {
+            engine.runtimeState.collect { observedStates += it }
+        }
+        yield()
+
+        val result = engine.initialize()
+        yield()
+        collectJob.cancel()
+
+        assertTrue(result.isSuccess)
+        assertTrue(observedStates.none { it is ModelRuntimeState.Failed })
         assertEquals(ModelRuntimeState.Ready, engine.runtimeState.value)
     }
 

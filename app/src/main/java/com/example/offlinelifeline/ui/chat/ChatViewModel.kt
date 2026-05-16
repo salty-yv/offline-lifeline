@@ -16,21 +16,30 @@ import com.example.offlinelifeline.inference.LocalLlmEngine
 import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.inference.ModelAssetManager
 import com.example.offlinelifeline.inference.ModelManifest
+import com.example.offlinelifeline.inference.download.ModelDownloadRepository
+import com.example.offlinelifeline.inference.download.ModelDownloadState
 import com.example.offlinelifeline.device.image.ImagePreprocessor
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.io.File
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChatViewModel(
     private val chatRepository: ChatRepository,
     private val llmEngine: LocalLlmEngine,
     private val survivalAgent: SurvivalAgent,
     private val modelAssetManager: ModelAssetManager,
+    private val modelDownloadRepository: ModelDownloadRepository,
     private val imagePreprocessor: ImagePreprocessor,
     private val settingsStore: SettingsStore,
     private val timeProvider: TimeProvider = TimeProvider.System
@@ -81,11 +90,23 @@ class ChatViewModel(
                         )
                     }
                     modelRefreshJob?.cancel()
-                    modelRefreshJob = launch {
-                        refreshSelectedModel(settings.activeModelId)
-                    }
+                    refreshModelSoon(settings.activeModelId)
                 }
             }
+        }
+
+        viewModelScope.launch {
+            settingsStore.settings
+                .map { it.activeModelId }
+                .distinctUntilChanged()
+                .flatMapLatest { modelId ->
+                    modelDownloadRepository.getDownloadState(modelId).map { state -> modelId to state }
+                }
+                .collect { (modelId, downloadState) ->
+                    if (downloadState is ModelDownloadState.Completed) {
+                        refreshModelSoon(modelId)
+                    }
+                }
         }
     }
 
@@ -339,10 +360,20 @@ class ChatViewModel(
 
         llmEngine.initialize()
             .onFailure { throwable ->
+                if (throwable is CancellationException) {
+                    throw throwable
+                }
                 _uiState.update {
                     it.copy(errorMessage = throwable.message ?: "模型初始化失败")
                 }
             }
+    }
+
+    private fun refreshModelSoon(modelId: String) {
+        modelRefreshJob?.cancel()
+        modelRefreshJob = viewModelScope.launch {
+            refreshSelectedModel(modelId)
+        }
     }
 
     private fun updateAssistantMessage(message: ChatMessage) {
@@ -391,6 +422,7 @@ class ChatViewModel(
         private val llmEngine: LocalLlmEngine,
         private val survivalAgent: SurvivalAgent,
         private val modelAssetManager: ModelAssetManager,
+        private val modelDownloadRepository: ModelDownloadRepository,
         private val imagePreprocessor: ImagePreprocessor,
         private val settingsStore: SettingsStore
     ) : ViewModelProvider.Factory {
@@ -402,6 +434,7 @@ class ChatViewModel(
                     llmEngine = llmEngine,
                     survivalAgent = survivalAgent,
                     modelAssetManager = modelAssetManager,
+                    modelDownloadRepository = modelDownloadRepository,
                     imagePreprocessor = imagePreprocessor,
                     settingsStore = settingsStore
                 ) as T

@@ -22,6 +22,7 @@ class FallbackLlmEngine(
         get() = activeEngine.supportsImageInput
 
     override suspend fun initialize(): Result<Unit> = initializeMutex.withLock {
+        _runtimeState.value = ModelRuntimeState.Loading
         val primaryResult = primary.initialize()
         if (primaryResult.isSuccess) {
             activeEngine = primary
@@ -29,8 +30,6 @@ class FallbackLlmEngine(
             return@withLock primaryResult
         }
 
-        val primaryState = primary.runtimeState.value
-        _runtimeState.value = primaryState
         val fallbackResult = fallback.initialize()
         if (fallbackResult.isSuccess) {
             activeEngine = fallback

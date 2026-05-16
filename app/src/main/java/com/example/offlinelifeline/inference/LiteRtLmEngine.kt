@@ -53,7 +53,7 @@ class LiteRtLmEngine(
         }
 
         val startedAt = SystemClock.elapsedRealtime()
-        return runCatching {
+        return try {
             _runtimeState.value = ModelRuntimeState.Checking
             val checkResult = modelAssetManager.prepareModelForRuntime(manifest)
             if (checkResult.runtimeState != ModelRuntimeState.ReadyToLoad) {
@@ -100,7 +100,11 @@ class LiteRtLmEngine(
                 TAG,
                 "litertlm_initialize_success modelId=${manifest.modelId} elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
             )
-        }.onFailure { throwable ->
+            Result.success(Unit)
+        } catch (throwable: Throwable) {
+            if (throwable is CancellationException) {
+                throw throwable
+            }
             _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM initialization failed")
             debugLogger.error(
                 TAG,
@@ -108,6 +112,7 @@ class LiteRtLmEngine(
                 throwable
             )
             releaseLocked()
+            Result.failure(throwable)
         }
     }
 
