@@ -96,9 +96,9 @@ fun SurvivalApp() {
                 text = {
                     Text(
                         if (isEnglish) {
-                            "Do you want to close Offline Lifeline?"
+                            "Do you want to close OffLifeline?"
                         } else {
-                            "确定要退出 Offline Lifeline 吗？"
+                            "确定要退出 OffLifeline 吗？"
                         }
                     )
                 },

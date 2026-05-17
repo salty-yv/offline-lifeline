@@ -157,7 +157,7 @@ fun ChatScreen(
                 .background(MaterialTheme.colorScheme.surface)
         ) {
             LifelineTopBar(
-                title = "Offline Lifeline",
+                title = "OffLifeline",
                 navigationIcon = if (showMenuIcon) Icons.Default.Menu else null,
                 navigationContentDescription = strings.history,
                 onNavigationClick = if (showMenuIcon) {

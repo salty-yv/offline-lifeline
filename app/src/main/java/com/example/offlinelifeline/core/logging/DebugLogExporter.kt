@@ -18,7 +18,7 @@ class DebugLogExporter(
             runCatching {
                 val logs = repository.observeLogs().first()
                 val dir = File(appContext.getExternalFilesDir(null), "debug-logs").apply { mkdirs() }
-                val file = File(dir, "offline-lifeline-debug-${System.currentTimeMillis()}.txt")
+                val file = File(dir, "offlifeline-debug-${System.currentTimeMillis()}.txt")
                 file.writeText(
                     logs.joinToString(separator = "\n") { log ->
                         "${log.createdAtMillis} [${log.level}] ${log.tag}: ${log.message}"

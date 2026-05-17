@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Offline Lifeline"
+rootProject.name = "OffLifeline"
 include(":app")
  

@@ -3,31 +3,38 @@ package com.example.offlinelifeline.ui.settings
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,10 +44,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.offlinelifeline.R
 import com.example.offlinelifeline.core.model.ModelRuntimeState
 import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.ui.components.LifelineTopBar
@@ -275,19 +287,42 @@ private fun AboutDetailScreen(
     val packageInfo = remember(context) {
         context.packageManager.getPackageInfo(context.packageName, 0)
     }
-    val versionCode = remember(packageInfo) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.longVersionCode.toString()
-        } else {
-            @Suppress("DEPRECATION")
-            packageInfo.versionCode.toString()
-        }
-    }
     val versionName = packageInfo.versionName ?: strings.unknown
+    var infoDialog by rememberSaveable { mutableStateOf<AboutInfoDialog?>(null) }
     val openUrl: (String) -> Unit = { url ->
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }
+    }
+
+    infoDialog?.let { dialog ->
+        AlertDialog(
+            onDismissRequest = { infoDialog = null },
+            title = {
+                Text(
+                    text = when (dialog) {
+                        AboutInfoDialog.Privacy -> strings.privacyPolicy
+                        AboutInfoDialog.Terms -> strings.termsOfService
+                    }
+                )
+            },
+            text = {
+                Text(
+                    text = when (dialog) {
+                        AboutInfoDialog.Privacy -> strings.privacyBody
+                        AboutInfoDialog.Terms -> strings.termsBody
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                    textAlign = TextAlign.Justify
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { infoDialog = null }) {
+                    Text(strings.close)
+                }
+            }
+        )
     }
 
     Column(
@@ -304,142 +339,161 @@ private fun AboutDetailScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(start = 16.dp, top = 32.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = strings.appDisplayName,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = strings.tagline,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "${strings.version} $versionName ($versionCode)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                AboutIdentity(
+                    strings = strings,
+                    versionName = versionName,
+                    onGithubClick = { openUrl(AUTHOR_HOMEPAGE_URL) }
+                )
             }
 
             item {
-                AboutSection(title = strings.appInfoTitle) {
-                    AboutRow(label = strings.appName, value = strings.appDisplayName)
-                    AboutRow(label = strings.version, value = "$versionName ($versionCode)")
-                    AboutRow(label = strings.packageName, value = context.packageName)
-                    AboutRow(label = strings.license, value = strings.openSource)
-                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             }
 
             item {
-                AboutSection(title = strings.linksTitle) {
-                    AboutRow(
-                        label = strings.authorHomepage,
-                        value = AUTHOR_HOMEPAGE_URL,
-                        onClick = { openUrl(AUTHOR_HOMEPAGE_URL) }
-                    )
-                    HorizontalDivider()
-                    AboutRow(
-                        label = strings.projectHomepage,
-                        value = PROJECT_HOMEPAGE_URL,
-                        onClick = { openUrl(PROJECT_HOMEPAGE_URL) }
-                    )
-                }
+                Text(
+                    text = strings.tagline,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             item {
-                AboutSection(title = strings.privacyTitle) {
-                    Text(
-                        text = strings.privacyBody,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                AboutLinkList(
+                    strings = strings,
+                    onPrivacyClick = { infoDialog = AboutInfoDialog.Privacy },
+                    onTermsClick = { infoDialog = AboutInfoDialog.Terms },
+                    onUpdateClick = { openUrl(PROJECT_RELEASES_URL) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AboutSection(
-    title: String,
+private fun AboutIdentity(
+    strings: AboutSettingsStrings,
+    versionName: String,
+    onGithubClick: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
 ) {
-    Card(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+            Image(
+                painter = painterResource(R.drawable.app_icon),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
-            content()
+        }
+
+        Text(
+            text = strings.appDisplayName,
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Text(
+            text = "${strings.version} $versionName",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Text(
+            text = AUTHOR_HOMEPAGE_URL,
+            modifier = Modifier.clickable(onClick = onGithubClick),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AboutLinkList(
+    strings: AboutSettingsStrings,
+    onPrivacyClick: () -> Unit,
+    onTermsClick: () -> Unit,
+    onUpdateClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AboutLinkRow(
+                label = strings.privacyPolicy,
+                iconRes = R.drawable.ic_chevron_right_24,
+                onClick = onPrivacyClick
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            AboutLinkRow(
+                label = strings.termsOfService,
+                iconRes = R.drawable.ic_chevron_right_24,
+                onClick = onTermsClick
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            AboutLinkRow(
+                label = strings.checkUpdates,
+                iconRes = R.drawable.ic_refresh_24,
+                onClick = onUpdateClick
+            )
         }
     }
 }
 
 @Composable
-private fun AboutRow(
+private fun AboutLinkRow(
     label: String,
-    value: String,
+    iconRes: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 2.dp),
+            .clickable(onClick = onClick)
+            .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+            color = MaterialTheme.colorScheme.onSurface
         )
-        Text(
-            text = value,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 16.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (onClick != null) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            color = if (onClick != null) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
     }
+}
+
+private enum class AboutInfoDialog {
+    Privacy,
+    Terms
 }
 
 private data class AboutSettingsStrings(
@@ -447,18 +501,14 @@ private data class AboutSettingsStrings(
     val entryDescription: String,
     val back: String,
     val tagline: String,
-    val appInfoTitle: String,
-    val linksTitle: String,
-    val privacyTitle: String,
+    val privacyPolicy: String,
+    val termsOfService: String,
+    val checkUpdates: String,
     val privacyBody: String,
-    val appName: String,
+    val termsBody: String,
+    val close: String,
     val appDisplayName: String,
     val version: String,
-    val packageName: String,
-    val license: String,
-    val openSource: String,
-    val authorHomepage: String,
-    val projectHomepage: String,
     val unknown: String
 ) {
     companion object {
@@ -468,48 +518,40 @@ private data class AboutSettingsStrings(
 
         private fun zh() = AboutSettingsStrings(
             title = "关于",
-            entryDescription = "版本、项目主页、作者主页和本地隐私说明",
+            entryDescription = "版本、隐私政策、服务条款和更新入口",
             back = "返回设置",
-            tagline = "一个面向离线应急场景的本地生存助手。",
-            appInfoTitle = "应用信息",
-            linksTitle = "相关链接",
-            privacyTitle = "隐私与离线说明",
+            tagline = "一款专为无网环境设计的生存与急救助手。在紧急情况下提供离线指南、急救信息以及基于本地 AI 模型的生存建议。",
+            privacyPolicy = "隐私政策",
+            termsOfService = "服务条款",
+            checkUpdates = "检查更新",
             privacyBody = "对话、个人信息卡和本地工具数据默认保存在本机。应用优先使用离线指南、本地工具和设备端模型能力，不会自动上传你的个人信息。",
-            appName = "应用名称",
-            appDisplayName = "Offline Lifeline",
-            version = "版本号",
-            packageName = "包名",
-            license = "授权",
-            openSource = "开源项目",
-            authorHomepage = "作者主页",
-            projectHomepage = "项目主页",
+            termsBody = "OffLifeline 提供离线应急辅助信息，不能替代专业救援、医疗诊断或当地主管部门指令。遇到危险时，请优先联系当地紧急服务并遵循现场安全要求。",
+            close = "关闭",
+            appDisplayName = "OffLifeline",
+            version = "Version",
             unknown = "未知"
         )
 
         private fun en() = AboutSettingsStrings(
             title = "About",
-            entryDescription = "Version, project links, author profile, and local privacy notes",
+            entryDescription = "Version, privacy policy, terms, and update entry",
             back = "Back to settings",
-            tagline = "A local survival assistant for offline emergency situations.",
-            appInfoTitle = "App information",
-            linksTitle = "Links",
-            privacyTitle = "Privacy and offline notes",
+            tagline = "A survival and first aid assistant designed for offline environments. In emergencies, it provides offline guides, first aid information, and survival suggestions powered by local AI models.",
+            privacyPolicy = "Privacy Policy",
+            termsOfService = "Terms of Service",
+            checkUpdates = "Check for Updates",
             privacyBody = "Chats, emergency card details, and local tool data are stored on this device by default. The app prioritizes offline guides, local tools, and on-device model features. It does not automatically upload your personal information.",
-            appName = "App name",
-            appDisplayName = "Offline Lifeline",
+            termsBody = "OffLifeline provides offline emergency assistance information. It is not a replacement for professional rescue, medical diagnosis, or instructions from local authorities. In danger, contact local emergency services first and follow on-site safety guidance.",
+            close = "Close",
+            appDisplayName = "OffLifeline",
             version = "Version",
-            packageName = "Package",
-            license = "License",
-            openSource = "Open-source project",
-            authorHomepage = "Author homepage",
-            projectHomepage = "Project homepage",
             unknown = "Unknown"
         )
     }
 }
 
 private const val AUTHOR_HOMEPAGE_URL = "https://github.com/salty-yv"
-private const val PROJECT_HOMEPAGE_URL = "https://github.com/salty-yv/offline-lifeline"
+private const val PROJECT_RELEASES_URL = "https://github.com/salty-yv/offline-lifeline/releases"
 
 private fun createModelFilePickerIntent(): Intent {
     return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
