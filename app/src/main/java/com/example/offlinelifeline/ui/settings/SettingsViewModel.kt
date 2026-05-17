@@ -1,6 +1,7 @@
 package com.example.offlinelifeline.ui.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
@@ -45,6 +46,8 @@ class SettingsViewModel(
 
     private val availabilityFlows = mutableMapOf<String, MutableStateFlow<ModelAssetCheckResult?>>()
     private val workObservers = mutableMapOf<String, WorkObserverRegistration>()
+    private val _externalModelSelection = MutableStateFlow<ModelAssetCheckResult?>(null)
+    val externalModelSelection: StateFlow<ModelAssetCheckResult?> = _externalModelSelection.asStateFlow()
 
     init {
         ModelCatalog.all.forEach(::observeDownloadWork)
@@ -108,6 +111,43 @@ class SettingsViewModel(
     fun cancelDownload(manifest: ModelManifest) {
         workManager.cancelUniqueWork(ModelDownloadWorker.workName(manifest.modelId))
         modelDownloadRepository.cancelDownload(manifest.modelId, manifest)
+    }
+
+    fun selectExternalModel(uri: Uri) {
+        viewModelScope.launch {
+            _externalModelSelection.value = ModelAssetCheckResult(
+                manifest = ModelManifest.Default,
+                location = null,
+                runtimeState = ModelRuntimeState.Checking,
+                message = "Moving selected model into app storage..."
+            )
+
+            val checkResult = runCatching {
+                modelAssetManager.moveSelectedModelIntoAppStorage(uri)
+            }.getOrElse { error ->
+                ModelAssetCheckResult(
+                    manifest = ModelManifest.Default,
+                    location = null,
+                    runtimeState = ModelRuntimeState.Failed(error.message ?: "Selected model move failed"),
+                    message = error.message ?: "Selected model move failed"
+                )
+            }
+
+            _externalModelSelection.value = checkResult
+            if (checkResult.runtimeState == ModelRuntimeState.ReadyToLoad) {
+                val manifest = checkResult.manifest
+                settingsStore.clearExternalModel()
+                settingsStore.setActiveModelId(manifest.modelId)
+                getOrCreateAvailabilityFlow(manifest.modelId).value = checkResult
+                modelDownloadRepository.setDownloadState(manifest.modelId, ModelDownloadState.Completed(manifest))
+            } else {
+                ModelCatalog.all.forEach { manifest ->
+                    if (modelDownloadRepository.getDownloadState(manifest.modelId).value is ModelDownloadState.Failed) {
+                        modelDownloadRepository.setDownloadState(manifest.modelId, ModelDownloadState.Idle)
+                    }
+                }
+            }
+        }
     }
 
     fun switchActiveModel(modelId: String) {

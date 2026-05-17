@@ -50,6 +50,7 @@ class ChatViewModel(
     private var generationJob: Job? = null
     private var modelRefreshJob: Job? = null
     private var activeModelId: String? = null
+    private var activeExternalModelUri: String? = null
     private var languageTag: String = "zh-CN"
 
     init {
@@ -79,8 +80,12 @@ class ChatViewModel(
             settingsStore.settings.collect { settings ->
                 languageTag = settings.languageTag
                 _uiState.update { it.copy(chatTextSizeSp = settings.chatTextSizeSp) }
-                if (activeModelId != settings.activeModelId) {
+                if (
+                    activeModelId != settings.activeModelId ||
+                    activeExternalModelUri != settings.externalModelUri
+                ) {
                     activeModelId = settings.activeModelId
+                    activeExternalModelUri = settings.externalModelUri
                     generationJob?.cancel()
                     generationJob = null
                     _uiState.update {

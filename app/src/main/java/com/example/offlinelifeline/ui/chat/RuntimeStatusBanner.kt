@@ -44,6 +44,15 @@ fun RuntimeStatusText(
 }
 
 private fun compactErrorMessage(message: String, isEnglish: Boolean): String {
+    if (
+        message.contains("LiteRT", ignoreCase = true) ||
+        message.contains("/proc/self/fd", ignoreCase = true) ||
+        message.contains("model", ignoreCase = true) ||
+        message.contains("external", ignoreCase = true)
+    ) {
+        return message
+    }
+
     return when {
         message.contains("清空", ignoreCase = true) -> if (isEnglish) "Cleared" else "已清空"
         message.contains("删除", ignoreCase = true) -> if (isEnglish) "Deleted" else "已删除"

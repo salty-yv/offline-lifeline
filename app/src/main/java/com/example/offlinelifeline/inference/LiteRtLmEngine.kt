@@ -33,6 +33,7 @@ class LiteRtLmEngine(
     private var engine: Engine? = null
     private var conversation: Conversation? = null
     private var loadedModelId: String? = null
+    private var loadedModelLocationKey: String? = null
     private var stopRequested = false
     private var imageInputEnabled = false
     private val engineMutex = Mutex()
@@ -45,13 +46,6 @@ class LiteRtLmEngine(
     }
 
     private suspend fun initializeLocked(manifest: ModelManifest): Result<Unit> {
-        if (_runtimeState.value == ModelRuntimeState.Ready && loadedModelId == manifest.modelId) {
-            return Result.success(Unit)
-        }
-        if (engine != null && loadedModelId != manifest.modelId) {
-            releaseLocked()
-        }
-
         val startedAt = SystemClock.elapsedRealtime()
         return try {
             _runtimeState.value = ModelRuntimeState.Checking
@@ -61,7 +55,32 @@ class LiteRtLmEngine(
                 error(checkResult.message)
             }
 
-            val modelPath = checkResult.location?.absoluteModelPath()
+            val modelLocation = checkResult.location ?: error("Model path is unavailable.")
+            val modelLocationKey = modelAssetManager.modelLocationKey(modelLocation)
+            if (
+                _runtimeState.value == ModelRuntimeState.Ready &&
+                loadedModelId == manifest.modelId &&
+                loadedModelLocationKey == modelLocationKey
+            ) {
+                return Result.success(Unit)
+            }
+            if (
+                loadedModelId == manifest.modelId &&
+                loadedModelLocationKey == modelLocationKey &&
+                engine != null &&
+                conversation != null
+            ) {
+                _runtimeState.value = ModelRuntimeState.Ready
+                return Result.success(Unit)
+            }
+            if (
+                engine != null &&
+                (loadedModelId != manifest.modelId || loadedModelLocationKey != modelLocationKey)
+            ) {
+                releaseLocked()
+            }
+
+            val modelPath = modelAssetManager.modelPathForRuntime(modelLocation)
                 ?: error("Model path is unavailable.")
 
             _runtimeState.value = ModelRuntimeState.Loading
@@ -95,31 +114,34 @@ class LiteRtLmEngine(
             }
 
             loadedModelId = manifest.modelId
+            loadedModelLocationKey = modelLocationKey
             _runtimeState.value = ModelRuntimeState.Ready
             debugLogger.info(
                 TAG,
-                "litertlm_initialize_success modelId=${manifest.modelId} elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
+                "litertlm_initialize_success modelId=${manifest.modelId} location=$modelLocationKey elapsedMs=${SystemClock.elapsedRealtime() - startedAt} supportsImageInput=$supportsImageInput"
             )
             Result.success(Unit)
         } catch (throwable: Throwable) {
             if (throwable is CancellationException) {
                 throw throwable
             }
-            _runtimeState.value = ModelRuntimeState.Failed(throwable.message ?: "LiteRT-LM initialization failed")
+            val failureMessage = "LiteRT-LM initialization failed for ${manifest.modelName}: ${throwable.message ?: throwable::class.java.simpleName}"
+            _runtimeState.value = ModelRuntimeState.Failed(failureMessage)
             debugLogger.error(
                 TAG,
                 "litertlm_initialize_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}",
                 throwable
             )
             releaseLocked()
-            Result.failure(throwable)
+            Result.failure(IllegalStateException(failureMessage, throwable))
         }
     }
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
         engineMutex.withLock {
-            if (_runtimeState.value != ModelRuntimeState.Ready || conversation == null) {
-                initializeLocked(manifestProvider()).getOrThrow()
+            val manifest = manifestProvider()
+            if (needsInitialization(manifest)) {
+                initializeLocked(manifest).getOrThrow()
             }
             val activeConversation = conversation ?: error("LiteRT-LM conversation is not initialized")
             stopRequested = false
@@ -182,6 +204,17 @@ class LiteRtLmEngine(
         }
     }
 
+    private suspend fun needsInitialization(manifest: ModelManifest): Boolean {
+        if (_runtimeState.value != ModelRuntimeState.Ready || engine == null || conversation == null) {
+            return true
+        }
+        if (loadedModelId != manifest.modelId) {
+            return true
+        }
+        val currentLocationKey = modelAssetManager.currentModelLocationKey(manifest)
+        return currentLocationKey == null || loadedModelLocationKey != currentLocationKey
+    }
+
     override suspend fun stopGeneration() {
         stopRequested = true
         _runtimeState.value = ModelRuntimeState.Ready
@@ -224,7 +257,9 @@ class LiteRtLmEngine(
                 engine?.close()
                 engine = null
                 loadedModelId = null
+                loadedModelLocationKey = null
             }
+            modelAssetManager.releaseOpenExternalModelDescriptors()
         }.onFailure { throwable ->
             debugLogger.error(TAG, "litertlm_release_failed elapsedMs=${SystemClock.elapsedRealtime() - startedAt}", throwable)
             throw throwable

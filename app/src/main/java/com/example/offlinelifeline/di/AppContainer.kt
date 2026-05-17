@@ -24,6 +24,7 @@ import com.example.offlinelifeline.data.repository.ChatRepository
 import com.example.offlinelifeline.data.repository.EmergencyCardRepository
 import com.example.offlinelifeline.data.repository.GuideRepository
 import com.example.offlinelifeline.inference.FallbackLlmEngine
+import com.example.offlinelifeline.inference.ExternalModelReference
 import com.example.offlinelifeline.inference.LiteRtLmEngine
 import com.example.offlinelifeline.inference.LocalLlmEngine
 import com.example.offlinelifeline.inference.ModelCatalog
@@ -136,7 +137,18 @@ class AppContainer(context: Context) {
         ModelAssetManager(
             context = appContext,
             integrityChecker = modelIntegrityChecker,
-            debugLogger = debugLogger
+            debugLogger = debugLogger,
+            externalModelProvider = { modelId ->
+                val settings = settingsStore.settings.first()
+                if (settings.externalModelId == modelId && !settings.externalModelUri.isNullOrBlank()) {
+                    ExternalModelReference(
+                        uriString = settings.externalModelUri,
+                        displayName = settings.externalModelDisplayName
+                    )
+                } else {
+                    null
+                }
+            }
         )
     }
 
@@ -154,7 +166,12 @@ class AppContainer(context: Context) {
     val localLlmEngine: LocalLlmEngine by lazy {
         FallbackLlmEngine(
             primary = liteRtLmEngine,
-            fallback = mockLlmEngine
+            fallback = mockLlmEngine,
+            allowFallback = {
+                val settings = settingsStore.settings.first()
+                settings.externalModelUri.isNullOrBlank() ||
+                    settings.externalModelId != settings.activeModelId
+            }
         )
     }
 

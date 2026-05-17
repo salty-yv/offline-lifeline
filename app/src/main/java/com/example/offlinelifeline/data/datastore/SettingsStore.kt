@@ -24,6 +24,9 @@ class SettingsStore(context: Context) {
             useMockEngine = preferences[Keys.UseMockEngine] ?: true,
             debugModeEnabled = preferences[Keys.DebugModeEnabled] ?: false,
             activeModelId = preferences[Keys.ActiveModelId] ?: "e2b",
+            externalModelId = preferences[Keys.ExternalModelId],
+            externalModelUri = preferences[Keys.ExternalModelUri],
+            externalModelDisplayName = preferences[Keys.ExternalModelDisplayName],
             chatTextSizeSp = (preferences[Keys.ChatTextSizeSp] ?: DEFAULT_CHAT_TEXT_SIZE_SP)
                 .coerceIn(MIN_CHAT_TEXT_SIZE_SP, MAX_CHAT_TEXT_SIZE_SP)
         )
@@ -54,6 +57,26 @@ class SettingsStore(context: Context) {
         }
     }
 
+    suspend fun setExternalModel(
+        modelId: String,
+        uri: String,
+        displayName: String
+    ) {
+        dataStore.edit { preferences ->
+            preferences[Keys.ExternalModelId] = modelId
+            preferences[Keys.ExternalModelUri] = uri
+            preferences[Keys.ExternalModelDisplayName] = displayName
+        }
+    }
+
+    suspend fun clearExternalModel() {
+        dataStore.edit { preferences ->
+            preferences.remove(Keys.ExternalModelId)
+            preferences.remove(Keys.ExternalModelUri)
+            preferences.remove(Keys.ExternalModelDisplayName)
+        }
+    }
+
     suspend fun setChatTextSizeSp(sizeSp: Int) {
         dataStore.edit { preferences ->
             preferences[Keys.ChatTextSizeSp] = sizeSp.coerceIn(
@@ -68,6 +91,9 @@ class SettingsStore(context: Context) {
         val UseMockEngine = booleanPreferencesKey("use_mock_engine")
         val DebugModeEnabled = booleanPreferencesKey("debug_mode_enabled")
         val ActiveModelId = stringPreferencesKey("active_model_id")
+        val ExternalModelId = stringPreferencesKey("external_model_id")
+        val ExternalModelUri = stringPreferencesKey("external_model_uri")
+        val ExternalModelDisplayName = stringPreferencesKey("external_model_display_name")
         val ChatTextSizeSp = intPreferencesKey("chat_text_size_sp")
     }
 
@@ -83,5 +109,8 @@ data class AppSettings(
     val useMockEngine: Boolean = true,
     val debugModeEnabled: Boolean = false,
     val activeModelId: String = "e2b",
+    val externalModelId: String? = null,
+    val externalModelUri: String? = null,
+    val externalModelDisplayName: String? = null,
     val chatTextSizeSp: Int = 16
 )

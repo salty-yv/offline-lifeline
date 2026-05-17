@@ -1,9 +1,12 @@
 package com.example.offlinelifeline.ui.settings
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +22,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -37,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.offlinelifeline.core.model.ModelRuntimeState
 import com.example.offlinelifeline.inference.ModelCatalog
 import com.example.offlinelifeline.ui.components.LifelineTopBar
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
@@ -55,7 +60,15 @@ fun SettingsScreen(
     val aboutStrings = remember(strings.languageTag) {
         AboutSettingsStrings.forLanguage(strings.languageTag)
     }
+    val externalModelSelection by viewModel.externalModelSelection.collectAsState()
     var showAbout by rememberSaveable { mutableStateOf(false) }
+    val localModelFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let(viewModel::selectExternalModel)
+        }
+    }
 
     if (showAbout) {
         BackHandler {
@@ -155,6 +168,14 @@ fun SettingsScreen(
                     ) {
                         Text(modelStrings.rescanLocalModels)
                     }
+                    ExternalModelPickerRow(
+                        languageTag = strings.languageTag,
+                        selectionState = externalModelSelection?.runtimeState,
+                        message = externalModelSelection?.message,
+                        onChoose = {
+                            localModelFilePicker.launch(createModelFilePickerIntent())
+                        }
+                    )
                     HorizontalDivider()
 
                     ModelCatalog.all.forEachIndexed { index, manifest ->
@@ -489,6 +510,76 @@ private data class AboutSettingsStrings(
 
 private const val AUTHOR_HOMEPAGE_URL = "https://github.com/salty-yv"
 private const val PROJECT_HOMEPAGE_URL = "https://github.com/salty-yv/offline-lifeline"
+
+private fun createModelFilePickerIntent(): Intent {
+    return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        addCategory(Intent.CATEGORY_OPENABLE)
+        type = "*/*"
+        putExtra(
+            Intent.EXTRA_MIME_TYPES,
+            arrayOf(
+                "application/octet-stream",
+                "application/x-lm",
+                "*/*"
+            )
+        )
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+    }
+}
+
+@Composable
+private fun ExternalModelPickerRow(
+    languageTag: String,
+    selectionState: ModelRuntimeState?,
+    message: String?,
+    onChoose: () -> Unit
+) {
+    val isEnglish = languageTag.startsWith("en")
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = if (isEnglish) "Use model from phone storage" else "使用手机存储里的模型",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = if (isEnglish) {
+                "Pick a downloaded .litertlm file. The app checks its hash, identifies E2B or E4B, and moves it into app model storage."
+            } else {
+                "选择已经下载好的 .litertlm 文件，应用会校验哈希并自动判断是 E2B 还是 E4B，然后移动到应用模型目录。"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedButton(
+            onClick = onChoose,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (isEnglish) "Move model file" else "移动模型文件")
+        }
+        if (selectionState == ModelRuntimeState.Checking) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        if (!message.isNullOrBlank()) {
+            val isError = selectionState is ModelRuntimeState.Failed ||
+                selectionState == ModelRuntimeState.ChecksumFailed ||
+                selectionState == ModelRuntimeState.Missing
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+    }
+}
 
 @Composable
 private fun ChatTextSizeCard(

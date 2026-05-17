@@ -11,7 +11,8 @@ import kotlinx.coroutines.sync.withLock
 
 class FallbackLlmEngine(
     private val primary: LocalLlmEngine,
-    private val fallback: LocalLlmEngine
+    private val fallback: LocalLlmEngine,
+    private val allowFallback: suspend () -> Boolean = { true }
 ) : LocalLlmEngine {
     private val _runtimeState = MutableStateFlow<ModelRuntimeState>(ModelRuntimeState.NotChecked)
     override val runtimeState: StateFlow<ModelRuntimeState> = _runtimeState
@@ -27,6 +28,12 @@ class FallbackLlmEngine(
         if (primaryResult.isSuccess) {
             activeEngine = primary
             _runtimeState.value = ModelRuntimeState.Ready
+            return@withLock primaryResult
+        }
+
+        if (!allowFallback()) {
+            activeEngine = primary
+            _runtimeState.value = primary.runtimeState.value
             return@withLock primaryResult
         }
 
@@ -46,7 +53,8 @@ class FallbackLlmEngine(
     }
 
     override fun sendMessage(request: InferenceRequest): Flow<InferenceChunk> = flow {
-        if (activeEngine.runtimeState.value != ModelRuntimeState.Ready) {
+        val fallbackDisabledForCurrentModel = activeEngine == fallback && !allowFallback()
+        if (activeEngine.runtimeState.value != ModelRuntimeState.Ready || fallbackDisabledForCurrentModel) {
             initialize().getOrThrow()
         }
         activeEngine.sendMessage(request).collect { chunk ->
