@@ -286,7 +286,11 @@ class LiteRtLmEngine(
             .take(MAX_IMAGES)
             .mapNotNull { path ->
                 runCatching {
-                    Content.ImageBytes(File(path).readBytes())
+                    val imageFile = File(path)
+                    check(imageFile.isFile && imageFile.canRead()) {
+                        "Image file is unavailable"
+                    }
+                    Content.ImageFile(imageFile.absolutePath)
                 }.onFailure { throwable ->
                     debugLogger.warning(TAG, "litertlm_image_read_failed path=$path reason=${throwable.message}")
                 }.getOrNull()

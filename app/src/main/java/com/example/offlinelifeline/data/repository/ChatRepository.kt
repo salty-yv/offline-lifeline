@@ -75,7 +75,7 @@ class ChatRepository(
     }
 
     companion object {
-        const val DEFAULT_TITLE = "新对话"
+        const val DEFAULT_TITLE = ChatConversation.DEFAULT_TITLE
     }
 }
 

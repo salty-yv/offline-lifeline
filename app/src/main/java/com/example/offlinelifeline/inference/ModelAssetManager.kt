@@ -270,23 +270,24 @@ class ModelAssetManager(
                 )
             }
 
-            fileNames.firstNotNullOfOrNull { fileName ->
+            modelAssetCandidates(fileNames).firstNotNullOfOrNull { assetName ->
                 val assetExists = runCatching {
-                    appContext.assets.open(fileName).close()
+                    appContext.assets.open(assetName).close()
                 }.isSuccess
-                if (assetExists) ModelAssetLocation.AssetLocation(fileName) else null
+                if (assetExists) ModelAssetLocation.AssetLocation(assetName) else null
             }
         }
     }
 
     private fun copyAssetModelToFile(assetName: String): File {
         val modelDir = File(appContext.filesDir, "models").apply { mkdirs() }
-        val targetFile = modelDir.resolve(assetName)
+        val assetFileName = assetName.substringAfterLast('/')
+        val targetFile = modelDir.resolve(assetFileName)
         if (targetFile.exists() && targetFile.length() > 0L) {
             return targetFile
         }
 
-        val tmpFile = modelDir.resolve("$assetName.asset.tmp")
+        val tmpFile = modelDir.resolve("$assetFileName.asset.tmp")
         appContext.assets.open(assetName).use { input ->
             tmpFile.outputStream().use { output ->
                 input.copyTo(output)
@@ -297,6 +298,14 @@ class ModelAssetManager(
             tmpFile.delete()
         }
         return targetFile
+    }
+
+    private fun modelAssetCandidates(fileNames: List<String>): List<String> {
+        val commonBundledNames = listOf("model.task", "model.litertlm")
+        return (fileNames + commonBundledNames)
+            .distinct()
+            .flatMap { fileName -> listOf(fileName, "models/$fileName") }
+            .distinct()
     }
 
     private suspend fun moveVerifiedModelIntoAppStorage(

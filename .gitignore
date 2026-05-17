@@ -15,3 +15,9 @@
 .cxx
 local.properties
 *.litertlm
+*.task
+*.jks
+*.keystore
+*.apk
+/app/bundled/release/
+/app/lite/release/

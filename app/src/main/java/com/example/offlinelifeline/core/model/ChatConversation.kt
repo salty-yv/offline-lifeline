@@ -5,4 +5,11 @@ data class ChatConversation(
     val title: String,
     val createdAtMillis: Long,
     val updatedAtMillis: Long
-)
+) {
+    val hasDefaultTitle: Boolean
+        get() = title == DEFAULT_TITLE
+
+    companion object {
+        const val DEFAULT_TITLE = "新对话"
+    }
+}

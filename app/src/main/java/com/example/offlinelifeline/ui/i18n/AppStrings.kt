@@ -45,6 +45,7 @@ interface AppStrings {
     val confirmDelete: String
     val history: String
     val newConversation: String
+    val defaultConversationTitle: String
     val clearCurrent: String
     val delete: String
     val camera: String
@@ -161,6 +162,7 @@ object ZhAppStrings : AppStrings {
     override val confirmDelete = "确认删除"
     override val history = "历史记录"
     override val newConversation = "新建对话"
+    override val defaultConversationTitle = "新对话"
     override val clearCurrent = "清空当前"
     override val delete = "删除"
     override val camera = "拍照"
@@ -307,6 +309,7 @@ object EnAppStrings : AppStrings {
     override val confirmDelete = "Delete"
     override val history = "History"
     override val newConversation = "New chat"
+    override val defaultConversationTitle = "New chat"
     override val clearCurrent = "Clear"
     override val delete = "Delete"
     override val camera = "Camera"

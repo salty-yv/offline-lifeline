@@ -26,7 +26,8 @@ object ModelCatalog {
         // HuggingFace CDN 直链，公开仓库无需 Token，支持 Range 断点续传
         downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
-        alternateFileNames = listOf("gemma-4-E2B-it-litert-lm.litertlm")
+        alternateFileNames = listOf("gemma-4-E2B-it-litert-lm.litertlm"),
+        supportsImageInput = true
     )
 
     val E4B = ModelManifest(
@@ -39,7 +40,8 @@ object ModelCatalog {
         expectedSizeBytes = 3_659_530_240L,
         // HuggingFace CDN 直链，公开仓库无需 Token，支持 Range 断点续传
         downloadUrl = "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
-        fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm"
+        fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm",
+        supportsImageInput = true
     )
 
     val all: List<ModelManifest> = listOf(E2B, E4B)

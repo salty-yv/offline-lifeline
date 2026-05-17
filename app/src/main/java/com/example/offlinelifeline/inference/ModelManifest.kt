@@ -23,7 +23,8 @@ data class ModelManifest(
             expectedSizeBytes = 2_588_147_712L,
             downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
             fallbackUrl = "https://hf-mirror.com/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
-            alternateFileNames = listOf("gemma-4-E2B-it-litert-lm.litertlm")
+            alternateFileNames = listOf("gemma-4-E2B-it-litert-lm.litertlm"),
+            supportsImageInput = true
         )
     }
 }

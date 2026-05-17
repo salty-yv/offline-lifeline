@@ -58,6 +58,7 @@ import com.example.offlinelifeline.R
 import com.example.offlinelifeline.core.model.ChatConversation
 import com.example.offlinelifeline.core.model.ToolType
 import com.example.offlinelifeline.ui.components.LifelineTopBar
+import com.example.offlinelifeline.ui.i18n.AppStrings
 import com.example.offlinelifeline.ui.i18n.LocalAppStrings
 import kotlinx.coroutines.launch
 
@@ -125,7 +126,7 @@ fun ChatScreen(
         AlertDialog(
             onDismissRequest = { conversationToDelete = null },
             title = { Text(strings.deleteConversationTitle) },
-            text = { Text(strings.deleteConversationBody(conversation.title)) },
+            text = { Text(strings.deleteConversationBody(conversation.localizedTitle(strings))) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -457,7 +458,7 @@ private fun ConversationHistoryRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = conversation.title,
+                text = conversation.localizedTitle(strings),
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 4.dp),
@@ -479,4 +480,8 @@ private fun ConversationHistoryRow(
             }
         }
     }
+}
+
+private fun ChatConversation.localizedTitle(strings: AppStrings): String {
+    return if (hasDefaultTitle) strings.defaultConversationTitle else title
 }

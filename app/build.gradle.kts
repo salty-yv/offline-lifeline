@@ -22,6 +22,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "modelPackage"
+    productFlavors {
+        create("lite") {
+            dimension = "modelPackage"
+            applicationIdSuffix = ".lite"
+            versionNameSuffix = "-lite"
+        }
+        create("bundled") {
+            dimension = "modelPackage"
+            applicationIdSuffix = ".bundled"
+            versionNameSuffix = "-bundled"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -30,6 +44,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+    androidResources {
+        noCompress += listOf("litertlm", "task")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

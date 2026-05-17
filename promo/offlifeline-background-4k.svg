@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">OffLifeline background</title>
+  <desc id="desc">A clean dark teal survival-themed background with contour lines, subtle mountain silhouettes, and a warm path glow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#042F35"/>
+      <stop offset="0.52" stop-color="#082F2F"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="ember" cx="0.39" cy="0.72" r="0.54">
+      <stop offset="0" stop-color="#EA580C" stop-opacity="0.34"/>
+      <stop offset="0.42" stop-color="#EA580C" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#EA580C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coolGlow" cx="0.74" cy="0.28" r="0.62">
+      <stop offset="0" stop-color="#14B8A6" stop-opacity="0.16"/>
+      <stop offset="0.45" stop-color="#14B8A6" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#14B8A6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F97316" stop-opacity="0"/>
+      <stop offset="0.42" stop-color="#FDBA74" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="28" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.92  0 1 0 0 0.35  0 0 1 0 0.05  0 0 0 0.42 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#ember)"/>
+  <rect width="1920" height="1080" fill="url(#coolGlow)"/>
+
+  <g opacity="0.16" stroke="#99F6E4" stroke-width="2" fill="none">
+    <path d="M-90 205 C204 172 404 210 668 164 C908 122 1060 140 1298 104 C1532 68 1736 74 1992 22"/>
+    <path d="M-90 292 C224 250 456 276 748 236 C996 202 1158 212 1410 184 C1628 160 1798 164 2012 122"/>
+    <path d="M-90 850 C250 770 432 884 716 800 C982 722 1160 762 1398 680 C1614 606 1784 610 2012 524"/>
+    <path d="M-90 934 C218 856 438 954 746 876 C990 814 1192 846 1460 762 C1664 698 1812 714 2012 642"/>
+    <path d="M-90 1015 C226 936 490 1010 790 948 C1052 894 1222 922 1514 842 C1718 786 1840 792 2012 748"/>
+  </g>
+
+  <g opacity="0.22" fill="#064E3B">
+    <path d="M0 815 L176 628 L282 718 L418 552 L592 758 L700 670 L842 818 L842 1080 L0 1080 Z"/>
+    <path d="M520 842 L708 644 L842 758 L1048 560 L1264 824 L1264 1080 L520 1080 Z"/>
+    <path d="M1182 820 L1306 676 L1418 760 L1536 626 L1702 820 L1920 706 L1920 1080 L1182 1080 Z"/>
+  </g>
+
+  <g opacity="0.12" fill="#0F766E">
+    <path d="M196 1048 C408 988 558 1018 736 1042 C924 1068 1068 1038 1230 976 C1426 902 1612 920 1838 982 C1910 1002 1968 1014 2024 1018 L2024 1080 L196 1080 Z"/>
+    <path d="M-120 1058 C96 1018 262 1032 434 1058 C602 1084 770 1082 960 1044 C1160 1004 1330 978 1512 1016 C1688 1052 1820 1064 2024 1028 L2024 1080 L-120 1080 Z"/>
+  </g>
+
+  <path d="M242 842 C412 790 566 782 728 844 C900 910 1050 930 1222 860 C1370 800 1516 794 1686 850" stroke="url(#trail)" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.58" filter="url(#glow)"/>
+  <path d="M880 902 C1028 858 1174 870 1330 918 C1510 974 1642 970 1810 912" stroke="#F97316" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.32"/>
+</svg>

@@ -185,6 +185,22 @@ class ChatViewModel(
         generationJob = viewModelScope.launch {
             chatRepository.saveMessage(conversationId, userMessage)
 
+            if (pendingImages.isNotEmpty()) {
+                llmEngine.initialize()
+                    .onFailure { throwable ->
+                        if (throwable is CancellationException) {
+                            throw throwable
+                        }
+                        _uiState.update {
+                            it.copy(
+                                isGenerating = false,
+                                errorMessage = throwable.message ?: "模型初始化失败，暂时无法处理图片"
+                            )
+                        }
+                        return@launch
+                    }
+            }
+
             val preparedResponse = survivalAgent.prepareResponse(
                 userInput = text,
                 history = _uiState.value.messages.filter { it.id != assistantMessage.id },

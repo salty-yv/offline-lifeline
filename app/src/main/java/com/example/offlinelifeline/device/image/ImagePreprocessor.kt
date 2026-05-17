@@ -64,9 +64,11 @@ class ImagePreprocessor(
         val normalized = rotateIfNeeded(decoded, orientation)
         val scaled = scaleToMaxEdge(normalized)
 
-        val outputFile = createTempFile(prefix = "processed_", suffix = ".png")
+        val outputFile = createTempFile(prefix = "processed_", suffix = ".jpg")
         FileOutputStream(outputFile).use { output ->
-            scaled.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)
+            check(scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)) {
+                "Cannot encode processed image"
+            }
         }
 
         val result = Attachment.Image(
@@ -132,6 +134,6 @@ class ImagePreprocessor(
 
     private companion object {
         const val MAX_EDGE = 1024
-        const val PNG_QUALITY = 100
+        const val JPEG_QUALITY = 88
     }
 }
