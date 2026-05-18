@@ -11,6 +11,7 @@ import com.example.offlinelifeline.core.model.Attachment
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 class ImagePreprocessor(
     context: Context,
@@ -54,6 +55,10 @@ class ImagePreprocessor(
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(sourceFile.absolutePath, bounds)
 
+        check(bounds.outWidth > 0 && bounds.outHeight > 0) {
+            "Cannot read image dimensions"
+        }
+
         val sampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight)
         val decodeOptions = BitmapFactory.Options().apply {
             inSampleSize = sampleSize
@@ -64,9 +69,9 @@ class ImagePreprocessor(
         val normalized = rotateIfNeeded(decoded, orientation)
         val scaled = scaleToMaxEdge(normalized)
 
-        val outputFile = createTempFile(prefix = "processed_", suffix = ".jpg")
+        val outputFile = createTempFile(prefix = "processed_", suffix = ".png")
         FileOutputStream(outputFile).use { output ->
-            check(scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)) {
+            check(scaled.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, output)) {
                 "Cannot encode processed image"
             }
         }
@@ -95,25 +100,31 @@ class ImagePreprocessor(
     }
 
     private fun calculateInSampleSize(width: Int, height: Int): Int {
-        var sampleSize = 1
-        var halfWidth = width / 2
-        var halfHeight = height / 2
-        while (halfWidth / sampleSize >= MAX_EDGE && halfHeight / sampleSize >= MAX_EDGE) {
-            sampleSize *= 2
-        }
-        return sampleSize.coerceAtLeast(1)
+        if (width <= MAX_EDGE && height <= MAX_EDGE) return 1
+
+        val widthRatio = (width.toFloat() / MAX_EDGE.toFloat()).roundToInt()
+        val heightRatio = (height.toFloat() / MAX_EDGE.toFloat()).roundToInt()
+        return maxOf(widthRatio, heightRatio).coerceAtLeast(1)
     }
 
     private fun rotateIfNeeded(bitmap: Bitmap, orientation: Int): Bitmap {
-        val degrees = when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-            else -> 0f
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.preScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.preScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f)
+                matrix.preScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f)
+                matrix.preScale(-1f, 1f)
+            }
+            else -> return bitmap
         }
-        if (degrees == 0f) return bitmap
-
-        val matrix = Matrix().apply { postRotate(degrees) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
@@ -134,6 +145,6 @@ class ImagePreprocessor(
 
     private companion object {
         const val MAX_EDGE = 1024
-        const val JPEG_QUALITY = 88
+        const val PNG_QUALITY = 100
     }
 }

@@ -279,8 +279,8 @@ class LiteRtLmEngine(
         }
     }
 
-    private suspend fun buildContents(request: InferenceRequest, prompt: String): Contents? {
-        if (request.imagePaths.isEmpty() || !supportsImageInput) return null
+    private suspend fun buildContents(request: InferenceRequest, prompt: String): Contents? = withContext(dispatchers.io) {
+        if (request.imagePaths.isEmpty() || !supportsImageInput) return@withContext null
 
         val imageContents = request.imagePaths
             .take(MAX_IMAGES)
@@ -290,17 +290,32 @@ class LiteRtLmEngine(
                     check(imageFile.isFile && imageFile.canRead()) {
                         "Image file is unavailable"
                     }
-                    Content.ImageFile(imageFile.absolutePath)
+                    val imageBytes = imageFile.readBytes()
+                    check(imageBytes.isNotEmpty()) {
+                        "Image file is empty"
+                    }
+                    if (!imageBytes.hasPngSignature()) {
+                        debugLogger.warning(TAG, "litertlm_image_bytes_not_png path=$path bytes=${imageBytes.size}")
+                    }
+                    Content.ImageBytes(imageBytes)
                 }.onFailure { throwable ->
                     debugLogger.warning(TAG, "litertlm_image_read_failed path=$path reason=${throwable.message}")
                 }.getOrNull()
             }
 
-        if (imageContents.isEmpty()) return null
+        if (imageContents.isEmpty()) return@withContext null
 
-        return Contents.of(
-            listOf(Content.Text(prompt)) + imageContents
+        Contents.of(
+            imageContents + Content.Text(prompt)
         )
+    }
+
+    private fun ByteArray.hasPngSignature(): Boolean {
+        return size >= 4 &&
+            this[0] == 0x89.toByte() &&
+            this[1] == 0x50.toByte() &&
+            this[2] == 0x4E.toByte() &&
+            this[3] == 0x47.toByte()
     }
 
     private fun createEngine(modelPath: String, enableVision: Boolean): Engine {
