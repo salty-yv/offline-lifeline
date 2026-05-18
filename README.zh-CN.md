@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/offlifeline-background-4k.png" alt="OffLifeline cover" width="900">
+  <img src="docs/assets/offlifeline-end-card.png" alt="OffLifeline end card" width="900">
 </p>
 
 ## 项目概览
