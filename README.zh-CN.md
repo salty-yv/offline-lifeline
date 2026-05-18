@@ -106,6 +106,30 @@ app/src/bundled/assets/models/gemma-4-E2B-it.litertlm
 
 说明：模型文件通常超过 2GB，仓库已通过 `.gitignore` 排除 `*.litertlm`、`*.task`、`*.apk` 等大文件。发布 GitHub 仓库时，建议通过 Release、外部下载地址或项目说明提供模型获取方式。
 
+## 模型放置说明
+
+应用内的大模型中断重下 / 断点续传流程尚未经过充分测试。为了更稳妥地使用真实模型，推荐直接把模型文件放到应用的外部模型目录，或者在设置页使用软件自带的模型移动 / 导入功能。
+
+推荐外部目录格式：
+
+```text
+/storage/emulated/0/Android/data/<applicationId>/files/models/
+```
+
+常见安装包对应路径：
+
+```text
+/storage/emulated/0/Android/data/com.example.offlinelifeline/files/models/
+/storage/emulated/0/Android/data/com.example.offlinelifeline.lite/files/models/
+/storage/emulated/0/Android/data/com.example.offlinelifeline.bundled/files/models/
+```
+
+模型文件名应为：
+
+```text
+gemma-4-E2B-it.litertlm
+```
+
 ## 安全边界
 
 OffLifeline 提供的是离线自救辅助建议，不能替代专业救援、医生诊断、急救培训或官方灾害指引。在有信号或可联系外界时，应优先联系当地紧急服务、救援人员或医疗机构。

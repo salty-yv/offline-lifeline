@@ -118,6 +118,30 @@ On Windows:
 
 Note: model files are usually larger than 2 GB. This repository ignores `*.litertlm`, `*.task`, and `*.apk` files through `.gitignore`. For a public GitHub repository, provide the model through Releases, an external download link, or clear setup instructions instead of committing it directly.
 
+## Model Placement Note
+
+The in-app interrupted download / resume-download flow for large model files has not been fully tested. For a more reliable setup, place the model file in the app's external model folder, or use the app's model move/import feature from the settings screen.
+
+Recommended external folder:
+
+```text
+/storage/emulated/0/Android/data/<applicationId>/files/models/
+```
+
+Common package-specific paths:
+
+```text
+/storage/emulated/0/Android/data/com.example.offlinelifeline/files/models/
+/storage/emulated/0/Android/data/com.example.offlinelifeline.lite/files/models/
+/storage/emulated/0/Android/data/com.example.offlinelifeline.bundled/files/models/
+```
+
+Expected model filename:
+
+```text
+gemma-4-E2B-it.litertlm
+```
+
 ## Safety Scope
 
 OffLifeline provides offline self-help guidance only. It does not replace professional rescue, medical diagnosis, first-aid training, or official disaster instructions. When a network or other communication channel is available, contact local emergency services, rescue teams, or medical professionals first.
